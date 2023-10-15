@@ -4,6 +4,55 @@ using Vintagestory.API.Server;
 using Vintagestory.ServerMods;
 using SkiaSharp;
 
+/*
+    Once the rocks landscape is generated, the vanilla world generation will replace the top layers of rock with dirt/sand/gravel,
+    and place animals based on regional maps.
+
+    The different heights maps are defined in this object:
+        chunks[0].MapChunk.MapRegion
+
+    We can notably find:
+        -   ForestMap : Defines the forest density
+        -   ClimateMap : Defines the climate (rain and temperature)
+        -   ShrubMap : Defines the shurbs/foliages density
+    
+    The region maps do not give the climate in the given chunk only but on the chunk in its surrounding.
+    The origin of the region maps is set on the chunk coordinates (chunkX, chunkZ) modulo 16 (16 chunks in a region).
+
+    Here is an example of what is expected in the climate map of the chunk (18, 25). the "o" are values to provide, 
+    the "X" illustrates the position of the considered chunk. Borders are also to give to ensure the continuity of the 
+    maps in the world.
+
+       14  15      16  17  18  19  20  21  22  23  24  25  26  27  28  29  30  31      32  33
+    14  o   o   |   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   |   o   o
+    15  o   o   |   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   |   o   o
+        -------------------------------------------------------------------------------------
+    16  o   o   |   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   |   o   o
+    17  o   o   |   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   |   o   o
+    18  o   o   |   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   |   o   o
+    19  o   o   |   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   |   o   o
+    20  o   o   |   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   |   o   o
+    21  o   o   |   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   |   o   o
+    22  o   o   |   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   |   o   o
+    23  o   o   |   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   |   o   o
+    24  o   o   |   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   |   o   o
+    25  o   o   |   o   o   X   o   o   o   o   o   o   o   o   o   o   o   o   o   |   o   o
+    26  o   o   |   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   |   o   o
+    27  o   o   |   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   |   o   o
+    28  o   o   |   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   |   o   o
+    29  o   o   |   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   |   o   o
+    30  o   o   |   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   |   o   o
+    31  o   o   |   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   |   o   o
+       -------------------------------------------------------------------------------------
+    32  o   o   |   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   |   o   o
+    33  o   o   |   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   o   |   o   o
+
+    This map is stored in a 1D array using the same (X, Z) -> 1D mapping as used before.
+
+    However, it appears the origin of the map (low X and Z) is not at 0, 0 but at (length - 1, length - 1),
+    so the coordinates have to be flipped if the maps are set manually.
+
+*/
 public class AlpineFloor: ModStdWorldGen
 {
     ICoreServerAPI api;
