@@ -5,6 +5,7 @@ using Vintagestory.Server;
 using Vintagestory.ServerMods;
 using SkiaSharp;
 using System.Collections.Generic;
+using Vintagestory.Common;
 
 /**
 
@@ -104,25 +105,30 @@ namespace AlpineStoryMod
             //  Change this boolean to True to generate a climate (temperature - rain) mapping, for debug/information purpose.
             bool generateBiomeGrid = false ;
 
+            //  We give a 2048 - 2048 offset of the map to not start on the borders
+            uTool = new UtilTool(api, 2048, 2048);
+
             if(generateBiomeGrid){
                 biomeGrid = new BiomeGrid(api, height_map, data_width_per_pixel, min_height_custom);
                 api.Event.ChunkColumnGeneration(biomeGrid.OnChunkColumnGen, EnumWorldGenPass.Terrain, "standard");
             }
             else{
                 //  Reading the height map that will be provided to all world generation passes
-                var imageAsset = AssetLocation.Create("domain:data/processed.png");
-                height_map = SKBitmap.Decode(imageAsset.Path);
+                AssetLocation imageAsset = AssetLocation.Create("alpinestory:data/processed.png");
                 
+                IAsset asset = this.api.Assets.Get(imageAsset);
+                BitmapExternal bmpt = new BitmapExternal(asset.Data, asset.Data.Length, api.Logger);
+                height_map = bmpt.bmp;
+
                 if(height_map == null){
+                    uTool.print("Current directory : "+System.IO.Directory.GetCurrentDirectory());
+                    uTool.print("Files in current dir : "+System.IO.Directory.GetFiles(System.IO.Directory.GetCurrentDirectory()).ToString());
                     throw new Exception("Height map not found");
                 }
 
                 api.Logger.Notification("Image loaded : "+height_map.Width.ToString()+", "+height_map.Height.ToString());  
 
                 chunksize = api.WorldManager.ChunkSize;
-
-                //  We give a 2048 - 2048 offset of the map to not start on the borders
-                uTool = new UtilTool(api, 2048, 2048);
 
                 //  The region maps correspond to macro maps of the world, (one pixel per chunk)
                 //      -   regionMap is used to set climates based on the local altitude
