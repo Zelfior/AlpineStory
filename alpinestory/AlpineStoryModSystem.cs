@@ -114,9 +114,8 @@ namespace AlpineStoryMod
             }
             else{
                 //  Reading the height map that will be provided to all world generation passes
-                AssetLocation imageAsset = AssetLocation.Create("alpinestory:data/processed.png");
                 
-                IAsset asset = this.api.Assets.Get(imageAsset);
+                IAsset asset = this.api.Assets.Get(new AssetLocation("alpinestory:worldgen/processed.png"));
                 BitmapExternal bmpt = new BitmapExternal(asset.Data, asset.Data.Length, api.Logger);
                 height_map = bmpt.bmp;
 
