@@ -98,7 +98,7 @@ public class AlpineFloor: ModStdWorldGen
     {
         //  Setting the global forestation to zero to better control the forest density
         ITreeAttribute worldConfig = api.WorldManager.SaveGame.WorldConfiguration;
-        worldConfig.SetString("globalForestation", "0.");
+        // worldConfig.SetString("globalForestation", "0.");
 
         //  This value tells how many chunks are in a "region"
         int globalRegionSize = api.WorldManager.RegionSize / chunksize;
