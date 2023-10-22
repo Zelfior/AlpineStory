@@ -12,31 +12,36 @@ from scipy.ndimage import map_coordinates
 """
 data = Image.open("HeightMap.png")
 
+cut_size = 2
+
 image = np.array(data)[:,:,0]
+
+init_resolution_x = image.shape[0]
+init_resolution_y = image.shape[0]
 
 min_val = np.min(image)
 max_val = np.max(image)
 image = (image - min_val) / (max_val - min_val)*255
 
-local_max = np.zeros([8,8])
-local_min = np.zeros([8,8])
+local_max = np.zeros([2,2])
+local_min = np.zeros([2,2])
 
 data = image
 
-for i in range(8):
-    for j in range(8):
-        local_min[i,j] = np.min(data[1000*i:1000*(i+1), 1000*j:1000*(j+1)])
-        local_max[i,j] = np.max(data[1000*i:1000*(i+1), 1000*j:1000*(j+1)])
+for i in range(2):
+    for j in range(2):
+        local_min[i,j] = np.min(data[init_resolution_x*i/cut_size:init_resolution_x/cut_size*(i+1), init_resolution_y/cut_size*j:init_resolution_y/cut_size*(j+1)])
+        local_max[i,j] = np.max(data[init_resolution_x*i/cut_size:init_resolution_x/cut_size*(i+1), init_resolution_y/cut_size*j:init_resolution_y/cut_size*(j+1)])
 
 new_dims = []
-for original_length, new_length in zip(local_min.shape, (8000,8000)):
+for original_length, new_length in zip(local_min.shape, (init_resolution_x, init_resolution_y)):
     new_dims.append(np.linspace(0, original_length-1, new_length))
 
 coords = np.meshgrid(*new_dims, indexing='ij')
 extended_local_min = map_coordinates(local_min, coords)
 
 new_dims = []
-for original_length, new_length in zip(local_max.shape, (8000,8000)):
+for original_length, new_length in zip(local_max.shape, (init_resolution_x, init_resolution_y)):
     new_dims.append(np.linspace(0, original_length-1, new_length))
 
 coords = np.meshgrid(*new_dims, indexing='ij')
