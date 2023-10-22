@@ -5,7 +5,7 @@ using Vintagestory.Server;
 using Vintagestory.ServerMods;
 using SkiaSharp;
 using System.Collections.Generic;
-using Vintagestory.Common;
+using Vintagestory.API.Datastructures;
 
 /**
 
@@ -138,10 +138,31 @@ namespace AlpineStoryMod
                 //  Int random generator used as criterion to spawn halite
                 Random rand = new Random();
 
+                //  Initialize temperature bias for starting climate
+                
+                ITreeAttribute worldConfig = api.WorldManager.SaveGame.WorldConfiguration;
+                int temperature_bias = 0;
+                string startingClimate = worldConfig.GetString("startingClimate");
+                switch (startingClimate)
+                {
+                    case "hot":
+                        temperature_bias = TerraGenConfig.DescaleTemperature(30) - TerraGenConfig.DescaleTemperature(10);
+                        break;
+                    case "warm":
+                        temperature_bias = TerraGenConfig.DescaleTemperature(20) - TerraGenConfig.DescaleTemperature(10);
+                        break;
+                    case "cool":
+                        temperature_bias = TerraGenConfig.DescaleTemperature(0) - TerraGenConfig.DescaleTemperature(10);
+                        break;
+                    case "icy":
+                        temperature_bias = TerraGenConfig.DescaleTemperature(-10) - TerraGenConfig.DescaleTemperature(10);
+                        break;
+                }
+
                 //  Creating an instance of each generation function
                 alpineTerrain = new AlpineTerrain(api, height_map, data_width_per_pixel, min_height_custom, uTool);
                 alpineStrata = new AlpineStrata(api, height_map, data_width_per_pixel, min_height_custom, uTool);
-                alpineFloor = new AlpineFloor(api, height_map, data_width_per_pixel, min_height_custom, regionMap, lakeMap, uTool);
+                alpineFloor = new AlpineFloor(api, height_map, data_width_per_pixel, min_height_custom, temperature_bias, regionMap, lakeMap, uTool);
                 alpineFloorCorrection = new AlpineFloorCorrection(api, height_map, data_width_per_pixel, min_height_custom, regionMap, rand, uTool);
                 alpineRiver = new AlpineRiver(api, height_map, data_width_per_pixel, min_height_custom, regionMap, uTool);
 

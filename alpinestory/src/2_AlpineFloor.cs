@@ -61,11 +61,12 @@ public class AlpineFloor: ModStdWorldGen
     internal int max_height_custom;    
     internal int bare_land_height_custom;
     internal int min_height_custom; 
+    internal int temperature_bias = 0;
     internal UtilTool uTool;
     int regionToChunkRatio;
     internal int[] regionMap, lakeMap;
     public AlpineFloor(){}
-    public AlpineFloor(ICoreServerAPI api, SKBitmap height_map, float data_width_per_pixel, int min_height_custom, int[] regionMap, int[] lakeMap, UtilTool uTool)
+    public AlpineFloor(ICoreServerAPI api, SKBitmap height_map, float data_width_per_pixel, int min_height_custom, int temperature_bias, int[] regionMap, int[] lakeMap, UtilTool uTool)
     {
         LoadGlobalConfig(api);
         
@@ -84,6 +85,8 @@ public class AlpineFloor: ModStdWorldGen
         this.lakeMap = lakeMap;
 
         this.uTool = uTool;
+        
+        this.temperature_bias = temperature_bias;
     }
     public void OnChunkColumnGen(IChunkColumnGenerateRequest request)
     {   
@@ -96,10 +99,6 @@ public class AlpineFloor: ModStdWorldGen
     }
     private void generate(IServerChunk[] chunks, int chunkX, int chunkZ, bool requiresChunkBorderSmoothing)
     {
-        //  Setting the global forestation to zero to better control the forest density
-        ITreeAttribute worldConfig = api.WorldManager.SaveGame.WorldConfiguration;
-        // worldConfig.SetString("globalForestation", "0.");
-
         //  This value tells how many chunks are in a "region"
         int globalRegionSize = api.WorldManager.RegionSize / chunksize;
 
@@ -118,7 +117,9 @@ public class AlpineFloor: ModStdWorldGen
         //  The forest takes the vanilla generated value, if the altitude is not too high
         for(int i = 0; i < chunks[0].MapChunk.MapRegion.ForestMap.Data.Length; i++){
             if (lake_height_map[i] == min_height_custom){
-                forestMap.Data[i] = Math.Clamp(forestMap.Data[i]-1, 0, getForestFromHeight(forest_height_map[i])) ;
+                forestMap.Data[i] = (int) Math.Clamp(forestMap.Data[i]-1, 
+                                                getForestFromHeight(forest_height_map[i])*0.2, 
+                                                getForestFromHeight(forest_height_map[i])) ;
             }
             else{
                 forestMap.Data[i] = 0;
@@ -133,7 +134,7 @@ public class AlpineFloor: ModStdWorldGen
         climateMap.Data = uTool.build_mini_region_map(climateMap, fakeChunkX, fakeChunkZ, regionToChunkRatio, regionMap, globalRegionSize, 1);
 
         for(int i = 0; i < climateMap.Data.Length; i++){
-            climateMap.Data[i] = (int)(0 + getRainFromHeight(climateMap.Data[i])*Math.Pow(2, 8) +  getTemperatureFromHeight(climateMap.Data[i])*Math.Pow(2, 16)) ;
+            climateMap.Data[i] = (int)(0 + getRainFromHeight(climateMap.Data[i])*Math.Pow(2, 8) +  Math.Clamp(getTemperatureFromHeight(climateMap.Data[i]), 0, 255)*Math.Pow(2, 16)) ;
         }
         
         //     Holds a beach density map
@@ -168,9 +169,9 @@ public class AlpineFloor: ModStdWorldGen
             150 at min height
             80 at max height
         */
-        int min_value = 80;
-        int max_value = 150;
-        return (int)(150 - (max_value - min_value) * getRelativeHeight(height));
+        int min_value = 80 + temperature_bias;
+        int max_value = 150 + temperature_bias;
+        return (int)(max_value - (max_value - min_value) * getRelativeHeight(height));
     }    
     public int getShrubFromHeight(int height){
         if (height > bare_land_height_custom) return 0;
@@ -188,7 +189,7 @@ public class AlpineFloor: ModStdWorldGen
             return 0;
         }
         else{
-            return (int)(relative_height/0.6*255);
+            return (int)((1-relative_height/0.6)*255);
         }
     }
 }

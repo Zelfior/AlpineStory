@@ -128,11 +128,18 @@ public class AlpineStrata: ModStdWorldGen
                 for (int i = 1; i < strata.Variants.Length; i++)
                 {
                     if(intmaps[i].Data[mapIndex]  > 8){
-                        for (int j = 1; j < 10; j++)
+                        for (int j = 1; j < 15; j++)
                         {
                             if(maxHeight-j-5 > 0)
                             {
-                                uTool.setBlockId(lX, maxHeight-j-5, lZ, chunksize, chunks, rockIds[Math.Min(13, i)]);
+                                uTool.setBlockId(lX, maxHeight-j-5, lZ, chunksize, chunks, rockIds[i%14]);
+                            }
+                        }
+                        for (int j = 15; j < 30; j++)
+                        {
+                            if(maxHeight-j-5 > 0)
+                            {
+                                uTool.setBlockId(lX, maxHeight-j-5, lZ, chunksize, chunks, rockIds[(i+5)%14]);
                             }
                         }
                         break;
