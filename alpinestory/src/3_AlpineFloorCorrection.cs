@@ -106,8 +106,11 @@ public class AlpineFloorCorrection: ModStdWorldGen
             if (lX > haliteRadius && lZ > haliteRadius && lX < chunksize - haliteRadius && lZ < chunksize - haliteRadius){
                 posY = 1;
 
-                while(uTool.getBlockId(blockColumn%chunksize, posY, blockColumn/chunksize, chunksize, chunks) !=0) posY++;
+                while(posY < api.WorldManager.MapSizeY && uTool.getBlockId(blockColumn%chunksize, posY, blockColumn/chunksize, chunksize, chunks) !=0) posY++;
                 firstVoidFound = posY;
+
+                if (api.WorldManager.MapSizeY == posY)
+                    break;
 
                 while(posY < 0.9*max_height_custom && uTool.getBlockId(blockColumn%chunksize, posY, blockColumn/chunksize, chunksize, chunks) ==0) posY++;
                 if(posY < 0.9*max_height_custom){
@@ -143,11 +146,11 @@ public class AlpineFloorCorrection: ModStdWorldGen
                 
                 localRiverHeight = uTool.getRiverHeight(worldX, worldZ, min_height_custom, max_height_custom, data_width_per_pixel, height_map);
 
-                for(int posY = altitude-2; posY < localRiverHeight; posY++){
+                for(int posY = altitude-2; posY < localRiverHeight && posY < api.WorldManager.MapSizeY; posY++){
                     uTool.setBlockId(lZ%chunksize, posY, lZ/chunksize, chunksize, chunks, waterID, fluid:true);
                 }
 
-                if (altitude-2 == localRiverHeight){
+                if (altitude-2 == localRiverHeight && localRiverHeight < api.WorldManager.MapSizeY ){
                     uTool.setBlockId(lZ%chunksize, localRiverHeight, lZ/chunksize, chunksize, chunks, waterID, fluid:true);
                 }
 

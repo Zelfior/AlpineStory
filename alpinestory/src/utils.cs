@@ -58,7 +58,8 @@ public class UtilTool
         /*
             Sets the block at (lX, lY, lZ) coordinate in a chunk column to an air block.
         */
-        chunks[lY/chunksize].Data.SetBlockAir(ChunkIndex3d(lX, lY%chunksize, lZ, chunksize));
+        if (lY < api.WorldManager.MapSizeY)
+            chunks[lY/chunksize].Data.SetBlockAir(ChunkIndex3d(lX, lY%chunksize, lZ, chunksize));
     }
     int mod(int x, int m) {
         /*

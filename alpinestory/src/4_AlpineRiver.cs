@@ -72,7 +72,7 @@ public class AlpineRiver: ModStdWorldGen
 
                     localRiverHeight = uTool.getRiverHeight(worldX, worldZ, min_height_custom, max_height_custom, data_width_per_pixel, height_map);
 
-                    for(int posY = altitude-2; posY < localRiverHeight; posY++){
+                    for(int posY = altitude-2; posY < Math.Min(localRiverHeight, max_height_custom); posY++){
                         uTool.SetBlockAir(lZ%chunksize, posY, lZ/chunksize, chunksize, chunks);
                         uTool.setBlockId(lZ%chunksize, posY, lZ/chunksize, chunksize, chunks, waterID, fluid:true);
                     }
@@ -82,7 +82,7 @@ public class AlpineRiver: ModStdWorldGen
                         uTool.setBlockId(lZ%chunksize, localRiverHeight, lZ/chunksize, chunksize, chunks, waterID, fluid:true);
                     }
 
-                    for(int posY = localRiverHeight; posY < localRiverHeight+3; posY++){
+                    for(int posY = localRiverHeight; posY < Math.Min(localRiverHeight+3, max_height_custom); posY++){
                         uTool.SetBlockAir(lZ%chunksize, posY, lZ/chunksize, chunksize, chunks);
                     }
                 }
