@@ -98,11 +98,6 @@ public class AlpineTerrain: ModStdWorldGen
 
             int current_thread = Thread.CurrentThread.ManagedThreadId;
 
-            int lX = chunkIndex2d % chunksize;
-            int lZ = chunkIndex2d / chunksize;
-            int worldX = chunkX * chunksize + lX;
-            int worldZ = chunkZ * chunksize + lZ;
-            
             BitArray columnBlockSolidities = columnResults[chunkIndex2d].ColumnBlockSolidities;
 
             for (int posY = 1; posY < max_height_custom - 1; posY++)//80; posY++)
@@ -151,6 +146,11 @@ public class AlpineTerrain: ModStdWorldGen
                 }
             }
         }
+
+        /*
+            Saving the height map for future uses
+        */
+        chunks[0].MapChunk.MapRegion.SetModdata("Alpine_HeightMap", list_max_height);
 
         ushort ymax = 0;
         for (int i = 0; i < rainheightmap.Length; i++)

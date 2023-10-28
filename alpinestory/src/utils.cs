@@ -261,7 +261,10 @@ public class UtilTool
             }
         }
 
-        return localRiverHeights.Min();
+        if (localRiverHeights.Min() == max_height_custom)
+            return 0;
+        else
+            return localRiverHeights.Min();
     }
     
     public void makeLakes(IServerChunk[] chunks, int chunkX, int chunkZ, int chunksize, int waterID, int gravelID, int min_height_custom, int max_height_custom, float data_width_per_pixel, SKBitmap height_map){
