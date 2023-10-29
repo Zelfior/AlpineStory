@@ -7,23 +7,24 @@ using System.Collections;
 using System.Threading;
 using System.Threading.Tasks;
 using SkiaSharp;
+using System.Linq;
 
 public class AlpineTerrain: ModStdWorldGen
 {
     ICoreServerAPI api;
     int maxThreads;
-    internal SKBitmap height_map;
+    internal SKBitmap[] height_maps;
     internal float data_width_per_pixel;        
     internal int max_height_custom;
     internal int min_height_custom; 
     internal UtilTool uTool;
     public AlpineTerrain(){}
-    public AlpineTerrain(ICoreServerAPI api, SKBitmap height_map, float data_width_per_pixel, int min_height_custom, UtilTool uTool)
+    public AlpineTerrain(ICoreServerAPI api, SKBitmap[] height_map, float data_width_per_pixel, int min_height_custom, UtilTool uTool)
     {
         LoadGlobalConfig(api);
         
         this.api = api;
-        this.height_map = height_map;
+        this.height_maps = height_map;
 
         //  The ColumnResult object will contain the data of the chunks to generate
         columnResults = new ColumnResult[chunksize * chunksize];
@@ -61,31 +62,17 @@ public class AlpineTerrain: ModStdWorldGen
         ushort[] terrainheightmap = chunks[0].MapChunk.WorldGenTerrainHeightMap;
 
         //  Storing here the results for each X - Z coordinates (Y being the vertical) of the map pre-processing
-        int[] list_max_height = new int[chunksize*chunksize];
+        int[] list_max_height;
+        int[] elementMap ;
 
-        //  Pre-processing the map : storing the height map per X-Z coordinate
-        for (int lZ = 0; lZ < chunksize; lZ++)
-        {
-            int worldZ = chunkZ * chunksize + lZ;
-            for (int lX = 0; lX < chunksize; lX++)
-            {
-                int worldX = chunkX * chunksize + lX;
-                int current_index = uTool.ChunkIndex2d(lX, lZ, chunksize);
+        int interMountainChunkCount = 15;
 
-                int fakeWorldX = worldX + uTool.offsetX;
-                int fakeWorldZ = worldZ + uTool.offsetZ;
-
-                list_max_height[current_index] = (int) (min_height_custom + (max_height_custom - min_height_custom) * uTool.LerpPosHeight(fakeWorldX, fakeWorldZ, 0, data_width_per_pixel, height_map));
-                
-                //  Lowering the ground at rivers
-                if (uTool.LerpPosHeight(fakeWorldX, fakeWorldZ, 2, data_width_per_pixel, height_map) > 0.1){
-                    list_max_height[current_index] -= 3;
-                }
-            }
-        }
+        MapElementManager MEM = new MapElementManager(api, uTool, chunkX, chunkZ, min_height_custom, max_height_custom, height_maps);
+        MapElement[] elements = MEM.getLocalMapElements(interMountainChunkCount);
+        (list_max_height, elementMap) = MEM.generateHeightMap(elements, interMountainChunkCount);
 
         //  We find here all 2 high gap to increase the height there, it can prevent having 2 blocks wide steps, but is not necessary
-        int[] to_increase = uTool.analyse_chunk(list_max_height, chunkX, chunkZ, chunksize, min_height_custom, max_height_custom, data_width_per_pixel, height_map, 0);
+        int[] to_increase = uTool.analyse_chunk(list_max_height, chunkX, chunkZ, chunksize, min_height_custom, max_height_custom, data_width_per_pixel, 0);
 
         for (int lZ = 0; lZ < chunksize*chunksize; lZ++){
             if (to_increase[lZ] == 1){
@@ -98,11 +85,6 @@ public class AlpineTerrain: ModStdWorldGen
 
             int current_thread = Thread.CurrentThread.ManagedThreadId;
 
-            int lX = chunkIndex2d % chunksize;
-            int lZ = chunkIndex2d / chunksize;
-            int worldX = chunkX * chunksize + lX;
-            int worldZ = chunkZ * chunksize + lZ;
-            
             BitArray columnBlockSolidities = columnResults[chunkIndex2d].ColumnBlockSolidities;
 
             for (int posY = 1; posY < max_height_custom - 1; posY++)//80; posY++)
@@ -151,6 +133,11 @@ public class AlpineTerrain: ModStdWorldGen
                 }
             }
         }
+
+        /*
+            Saving the height map for future uses
+        */
+        chunks[0].MapChunk.MapRegion.SetModdata("Alpine_HeightMap", list_max_height);
 
         ushort ymax = 0;
         for (int i = 0; i < rainheightmap.Length; i++)

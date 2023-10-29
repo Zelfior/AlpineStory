@@ -61,7 +61,7 @@ public class UtilTool
         if (lY < api.WorldManager.MapSizeY)
             chunks[lY/chunksize].Data.SetBlockAir(ChunkIndex3d(lX, lY%chunksize, lZ, chunksize));
     }
-    int mod(int x, int m) {
+    public int mod(int x, int m) {
         /*
             Modulo function that necessarilly returns a value in [0, m[.
         */
@@ -118,7 +118,7 @@ public class UtilTool
         return  ((1-x)*(1-z)*h0_0 + x*(1-z)*h1_0 + (1-x)*z*h0_1 + x*z*h1_1)/255;
     }
 
-    public int[] analyse_chunk(int[] list_max_height, int chunkX, int chunkZ, int chunksize, int min_height_custom, int max_height_custom, float data_width_per_pixel, SKBitmap height_map, int criterion){
+    public int[] analyse_chunk(int[] list_max_height, int chunkX, int chunkZ, int chunksize, int min_height_custom, int max_height_custom, float data_width_per_pixel, int criterion){
         /*
             Detects specific features on the height map, features description below.
         */
@@ -261,7 +261,10 @@ public class UtilTool
             }
         }
 
-        return localRiverHeights.Min();
+        if (localRiverHeights.Min() == max_height_custom)
+            return 0;
+        else
+            return localRiverHeights.Min();
     }
     
     public void makeLakes(IServerChunk[] chunks, int chunkX, int chunkZ, int chunksize, int waterID, int gravelID, int min_height_custom, int max_height_custom, float data_width_per_pixel, SKBitmap height_map){

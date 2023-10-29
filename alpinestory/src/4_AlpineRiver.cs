@@ -12,9 +12,8 @@ public class AlpineRiver: ModStdWorldGen
     internal int max_height_custom;    
     internal int min_height_custom; 
     internal UtilTool uTool;
-    internal int[] regionMap;
     public AlpineRiver(){}
-    public AlpineRiver(ICoreServerAPI api, SKBitmap height_map, float data_width_per_pixel, int min_height_custom, int[] regionMap, UtilTool uTool)
+    public AlpineRiver(ICoreServerAPI api, SKBitmap height_map, float data_width_per_pixel, int min_height_custom, UtilTool uTool)
     {
         LoadGlobalConfig(api);
         
@@ -25,7 +24,6 @@ public class AlpineRiver: ModStdWorldGen
         this.max_height_custom = api.WorldManager.MapSizeY;
 
         this.data_width_per_pixel = data_width_per_pixel;
-        this.regionMap = regionMap;
 
         this.uTool = uTool;
     }
@@ -45,10 +43,10 @@ public class AlpineRiver: ModStdWorldGen
         int waterID = api.World.GetBlock(new AssetLocation("water-still-7")).Id ;
 
         //  Clean river beds
-        cleanRiverBed(chunks, chunkX, chunkZ, waterID, muddyGravelID);
+        // cleanRiverBed(chunks, chunkX, chunkZ, waterID, muddyGravelID);
 
         //  Clean river beds
-        uTool.makeLakes(chunks, chunkX, chunkZ, chunksize, waterID, muddyGravelID, min_height_custom, max_height_custom, data_width_per_pixel, height_map);
+        // uTool.makeLakes(chunks, chunkX, chunkZ, chunksize, waterID, muddyGravelID, min_height_custom, max_height_custom, data_width_per_pixel, height_map);
 
     }
     public void cleanRiverBed(IServerChunk[] chunks, int chunkX, int chunkZ, int waterID, int gravelID){
@@ -60,6 +58,7 @@ public class AlpineRiver: ModStdWorldGen
             int worldX = chunkX * chunksize + lZ%chunksize+ uTool.offsetX;
             int worldZ = chunkZ * chunksize + lZ/chunksize + uTool.offsetZ;
 
+            //  For dark reasons, unpacking Alpine_RiverMap doesn't work...
             hasRiver = uTool.LerpPosHeight(worldX, worldZ, 2, data_width_per_pixel, height_map);
 
             if(hasRiver > 0.1){

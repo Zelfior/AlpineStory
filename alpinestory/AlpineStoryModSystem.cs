@@ -6,6 +6,7 @@ using Vintagestory.ServerMods;
 using SkiaSharp;
 using System.Collections.Generic;
 using Vintagestory.API.Datastructures;
+using Vintagestory.API.Util;
 
 /**
 
@@ -44,15 +45,16 @@ namespace AlpineStoryMod
     {
         ICoreServerAPI api;
         SKBitmap height_map;
+        SKBitmap[] heightMaps;
+        SKBitmap[] regionMaps;
         internal float data_width_per_pixel;
-        internal int min_height_custom = 90; 
+        internal int min_height_custom; 
         AlpineTerrain alpineTerrain;
         AlpineStrata alpineStrata;
         AlpineFloor alpineFloor;
         AlpineFloorCorrection alpineFloorCorrection;
         AlpineRiver alpineRiver;
         BiomeGrid biomeGrid;
-        int[] regionMap;
         int[] lakeMap;
         UtilTool uTool;
         public override bool ShouldLoad(EnumAppSide side)
@@ -101,6 +103,7 @@ namespace AlpineStoryMod
 
             //  In this mod, the X - Z coordinates are scaled based on the map Y size
             data_width_per_pixel = api.WorldManager.MapSizeY / 256;
+            min_height_custom = api.World.SeaLevel;
 
             //  Change this boolean to True to generate a climate (temperature - rain) mapping, for debug/information purpose.
             bool generateBiomeGrid = false ;
@@ -114,26 +117,27 @@ namespace AlpineStoryMod
             }
             else{
                 //  Reading the height map that will be provided to all world generation passes
-                
-                IAsset asset = this.api.Assets.Get(new AssetLocation("alpinestory:worldgen/processed.png"));
-                BitmapExternal bmpt = new BitmapExternal(asset.Data, asset.Data.Length, api.Logger);
-                height_map = bmpt.bmp;
+                int bitmaps_count = 15;
+                heightMaps = new SKBitmap[bitmaps_count];
+                regionMaps = new SKBitmap[bitmaps_count];
 
-                if(height_map == null){
-                    uTool.print("Current directory : "+System.IO.Directory.GetCurrentDirectory());
-                    uTool.print("Files in current dir : "+System.IO.Directory.GetFiles(System.IO.Directory.GetCurrentDirectory()).ToString());
-                    throw new Exception("Height map not found");
+                for(int i = 0; i< bitmaps_count; i++){
+                    IAsset asset = this.api.Assets.Get(new AssetLocation("alpinestory:worldgen/alpsalpha/alps_"+(i+1).ToString("00")+".png"));
+                    BitmapExternal bmpt = new BitmapExternal(asset.Data, asset.Data.Length, api.Logger);
+
+                    heightMaps[i] = bmpt.bmp;
+
+                    //  The region maps correspond to macro maps of the world, (one pixel per chunk)
+                    //      -   regionMap is used to set climates based on the local altitude
+                    //      -   lakeMap is used to forbid forest in lakes
+                    
+                    // pixels[dz * wdt + dx] = ColorUtil.ColorFromRgba(precipi, precipi, precipi, 255);
+                    int[] averageHeights = uTool.build_region_map(heightMaps[i], api.WorldManager.ChunkSize, data_width_per_pixel, min_height_custom, api.WorldManager.MapSizeY, 0);
+                    Array.Reverse(averageHeights);
+                    regionMaps[i] = new SKBitmap(heightMaps[i].Width/api.WorldManager.ChunkSize, heightMaps[i].Width/api.WorldManager.ChunkSize);
+                    regionMaps[i].SetPixels(averageHeights);
                 }
 
-                api.Logger.Notification("Image loaded : "+height_map.Width.ToString()+", "+height_map.Height.ToString());  
-
-                chunksize = api.WorldManager.ChunkSize;
-
-                //  The region maps correspond to macro maps of the world, (one pixel per chunk)
-                //      -   regionMap is used to set climates based on the local altitude
-                //      -   lakeMap is used to forbid forest in lakes
-                regionMap = uTool.build_region_map(height_map, api.WorldManager.ChunkSize, data_width_per_pixel, min_height_custom, api.WorldManager.MapSizeY, 0);
-                lakeMap = uTool.build_region_map(height_map, api.WorldManager.ChunkSize, data_width_per_pixel, min_height_custom, api.WorldManager.MapSizeY, 1);
 
                 //  Int random generator used as criterion to spawn halite
                 Random rand = new Random();
@@ -160,11 +164,11 @@ namespace AlpineStoryMod
                 }
 
                 //  Creating an instance of each generation function
-                alpineTerrain = new AlpineTerrain(api, height_map, data_width_per_pixel, min_height_custom, uTool);
-                alpineStrata = new AlpineStrata(api, height_map, data_width_per_pixel, min_height_custom, uTool);
-                alpineFloor = new AlpineFloor(api, height_map, data_width_per_pixel, min_height_custom, temperature_bias, regionMap, lakeMap, uTool);
-                alpineFloorCorrection = new AlpineFloorCorrection(api, height_map, data_width_per_pixel, min_height_custom, regionMap, rand, uTool);
-                alpineRiver = new AlpineRiver(api, height_map, data_width_per_pixel, min_height_custom, regionMap, uTool);
+                alpineTerrain = new AlpineTerrain(api, heightMaps, data_width_per_pixel, min_height_custom, uTool);
+                alpineStrata = new AlpineStrata(api, data_width_per_pixel, min_height_custom, uTool);
+                alpineFloor = new AlpineFloor(api, data_width_per_pixel, min_height_custom, temperature_bias, regionMaps, uTool);
+                alpineFloorCorrection = new AlpineFloorCorrection(api, height_map, data_width_per_pixel, min_height_custom, rand, uTool);
+                alpineRiver = new AlpineRiver(api, height_map, data_width_per_pixel, min_height_custom, uTool);
 
                 //  Registering the generation function in the Terrain pass. It is not necessary to have them stored in different files.
                 api.Event.ChunkColumnGeneration(alpineTerrain.OnChunkColumnGen, EnumWorldGenPass.Terrain, "standard");

@@ -63,16 +63,13 @@ public class AlpineFloor: ModStdWorldGen
     internal int min_height_custom; 
     internal int temperature_bias = 0;
     internal UtilTool uTool;
-    int regionToChunkRatio;
-    internal int[] regionMap, lakeMap;
+    internal SKBitmap[] regionMaps;
     public AlpineFloor(){}
-    public AlpineFloor(ICoreServerAPI api, SKBitmap height_map, float data_width_per_pixel, int min_height_custom, int temperature_bias, int[] regionMap, int[] lakeMap, UtilTool uTool)
+    public AlpineFloor(ICoreServerAPI api, float data_width_per_pixel, int min_height_custom, int temperature_bias, SKBitmap[] regionMaps, UtilTool uTool)
     {
         LoadGlobalConfig(api);
         
         this.api = api;
-        this.height_map = height_map;
-        regionToChunkRatio = height_map.Width/chunksize;
         
         max_height_custom = api.WorldManager.MapSizeY;
 
@@ -81,8 +78,7 @@ public class AlpineFloor: ModStdWorldGen
 
         this.data_width_per_pixel = data_width_per_pixel;
         this.min_height_custom = min_height_custom;
-        this.regionMap = regionMap;
-        this.lakeMap = lakeMap;
+        this.regionMaps = regionMaps;
 
         this.uTool = uTool;
         
@@ -92,7 +88,6 @@ public class AlpineFloor: ModStdWorldGen
     {   
         generate(request.Chunks, request.ChunkX, request.ChunkZ, request.RequiresChunkBorderSmoothing);
     }
-
     public override double ExecuteOrder()
     {
         return 0.15;
@@ -105,18 +100,24 @@ public class AlpineFloor: ModStdWorldGen
         //  Offsetting the chunk by the same offset as defined in AlpineStoryModModSystem
         int fakeChunkX = chunkX + uTool.offsetX/chunksize;
         int fakeChunkZ = chunkZ + uTool.offsetZ/chunksize;
+        
+        int interMountainChunkCount = 15;
+        
+        MapElementManager MEM = new MapElementManager(api, uTool, chunkX, chunkZ, min_height_custom, max_height_custom, regionMaps);
+        MapElement[] elements = MEM.getLocalMapElements(interMountainChunkCount);
+
+        int[] regionMap = new int[0];
 
         //     Holds a forest density map, from 0 to 255
         IntDataMap2D forestMap = chunks[0].MapChunk.MapRegion.ForestMap; 
 
         //  build_mini_region_map builds a local region map as understood by the MapRegion tools.
-        int[] forest_height_map = uTool.build_mini_region_map(forestMap, fakeChunkX, fakeChunkZ, regionToChunkRatio, regionMap, globalRegionSize, 1);
-        int[] lake_height_map = uTool.build_mini_region_map(forestMap, fakeChunkX, fakeChunkZ, regionToChunkRatio, lakeMap, globalRegionSize, 1);
+        int[] forest_height_map = MEM.generateRegionMap(interMountainChunkCount, forestMap, chunkX, chunkZ, globalRegionSize, 1);
         
         //  If we are in a lake : no forest
         //  The forest takes the vanilla generated value, if the altitude is not too high
         for(int i = 0; i < chunks[0].MapChunk.MapRegion.ForestMap.Data.Length; i++){
-            if (lake_height_map[i] == min_height_custom){
+            if (true){//(lake_height_map[i] == min_height_custom){
                 forestMap.Data[i] = (int) Math.Clamp(forestMap.Data[i]-1, 
                                                 getForestFromHeight(forest_height_map[i])*0.2, 
                                                 getForestFromHeight(forest_height_map[i])) ;
@@ -131,7 +132,7 @@ public class AlpineFloor: ModStdWorldGen
         //     8-15 bits = Green = rain
         //     0-7 bits = Blue = unused 
         IntDataMap2D climateMap = chunks[0].MapChunk.MapRegion.ClimateMap;
-        climateMap.Data = uTool.build_mini_region_map(climateMap, fakeChunkX, fakeChunkZ, regionToChunkRatio, regionMap, globalRegionSize, 1);
+        climateMap.Data = MEM.generateRegionMap(interMountainChunkCount, climateMap, chunkX, chunkZ, globalRegionSize, 1);
 
         for(int i = 0; i < climateMap.Data.Length; i++){
             climateMap.Data[i] = (int)(0 + getRainFromHeight(climateMap.Data[i])*Math.Pow(2, 8) +  Math.Clamp(getTemperatureFromHeight(climateMap.Data[i]), 0, 255)*Math.Pow(2, 16)) ;
@@ -145,7 +146,7 @@ public class AlpineFloor: ModStdWorldGen
         //     Bushes density map, from 0 to 255
         //     The bushes density decreases with height
         IntDataMap2D shrubMap = chunks[0].MapChunk.MapRegion.ShrubMap;
-        shrubMap.Data = uTool.build_mini_region_map(shrubMap, fakeChunkX, fakeChunkZ, regionToChunkRatio, regionMap, globalRegionSize, 0.5);
+        shrubMap.Data = MEM.generateRegionMap(interMountainChunkCount, shrubMap, chunkX, chunkZ, globalRegionSize, (float)0.5);
 
         for(int i = 0; i < shrubMap.Data.Length; i++){
             shrubMap.Data[i] = (int)getShrubFromHeight(shrubMap.Data[i]) ;

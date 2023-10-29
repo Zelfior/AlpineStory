@@ -15,10 +15,9 @@ public class AlpineFloorCorrection: ModStdWorldGen
     internal int bare_land_height_custom;
     internal int min_height_custom; 
     internal UtilTool uTool;
-    internal int[] regionMap;
     internal Random rand;
     public AlpineFloorCorrection(){}
-    public AlpineFloorCorrection(ICoreServerAPI api, SKBitmap height_map, float data_width_per_pixel, int min_height_custom, int[] regionMap, Random rand, UtilTool uTool)
+    public AlpineFloorCorrection(ICoreServerAPI api, SKBitmap height_map, float data_width_per_pixel, int min_height_custom, Random rand, UtilTool uTool)
     {
         LoadGlobalConfig(api);
         
@@ -31,7 +30,6 @@ public class AlpineFloorCorrection: ModStdWorldGen
 
         this.data_width_per_pixel = data_width_per_pixel;
         this.min_height_custom = min_height_custom;
-        this.regionMap = regionMap;
         this.rand = rand;
 
         this.uTool = uTool;
@@ -69,8 +67,8 @@ public class AlpineFloorCorrection: ModStdWorldGen
         //  Builds the chunk height map, and reduces the dirt layer thickness on the go to let the rocks appear on cliffs
         int[] list_max_height = countHeightMap(chunks, rockID, snowID, glacierID, soil_array);
 
-        int[] grass_map = uTool.analyse_chunk(list_max_height, chunkX, chunkZ, chunksize, min_height_custom, max_height_custom, data_width_per_pixel, height_map, 1);
-        int[] remove_snow_map = uTool.analyse_chunk(list_max_height, chunkX, chunkZ, chunksize, min_height_custom, max_height_custom, data_width_per_pixel, height_map, 2);
+        int[] grass_map = uTool.analyse_chunk(list_max_height, chunkX, chunkZ, chunksize, min_height_custom, max_height_custom, data_width_per_pixel, 1);
+        int[] remove_snow_map = uTool.analyse_chunk(list_max_height, chunkX, chunkZ, chunksize, min_height_custom, max_height_custom, data_width_per_pixel, 2);
 
         //  Replacing dirt by grass if the landscape is too steep
         clearSteepGrass(chunks, grass_map, list_max_height, gravelID);
@@ -82,10 +80,10 @@ public class AlpineFloorCorrection: ModStdWorldGen
         clearGlacier(chunks, rockID, glacierID, snowID);
 
         //  Make river beds
-        makeRiverBed(chunks, chunkX, chunkZ, waterID, muddyGravelID);
+        // makeRiverBed(chunks, chunkX, chunkZ, waterID, muddyGravelID);
 
         //  Make lakes
-        uTool.makeLakes(chunks, chunkX, chunkZ, chunksize, waterID, muddyGravelID, min_height_custom, max_height_custom, data_width_per_pixel, height_map);
+        // uTool.makeLakes(chunks, chunkX, chunkZ, chunksize, waterID, muddyGravelID, min_height_custom, max_height_custom, data_width_per_pixel, height_map);
 
         //  Spawn Halite every 30 chunk
         if (rand.Next(30) == 1){
@@ -132,6 +130,8 @@ public class AlpineFloorCorrection: ModStdWorldGen
         float hasRiver;
         int altitude;
         int localRiverHeight;
+
+        int[] riverMap = new int[chunksize*chunksize];
         
         //  Filling the river with water, and replaces the ground with two layers of muddy gravel
         //  The water height is taken minimal in its surrounding to not have weird behavior at the surface
@@ -143,8 +143,9 @@ public class AlpineFloorCorrection: ModStdWorldGen
 
             if(hasRiver > 0.1){
                 altitude = (int) (min_height_custom + (max_height_custom - min_height_custom) * uTool.LerpPosHeight(worldX, worldZ, 0, data_width_per_pixel, height_map));
-                
+
                 localRiverHeight = uTool.getRiverHeight(worldX, worldZ, min_height_custom, max_height_custom, data_width_per_pixel, height_map);
+                riverMap[lZ] = localRiverHeight;
 
                 for(int posY = altitude-2; posY < localRiverHeight && posY < api.WorldManager.MapSizeY; posY++){
                     uTool.setBlockId(lZ%chunksize, posY, lZ/chunksize, chunksize, chunks, waterID, fluid:true);
@@ -157,7 +158,12 @@ public class AlpineFloorCorrection: ModStdWorldGen
                 uTool.setBlockId(lZ%chunksize, altitude-4, lZ/chunksize, chunksize, chunks, gravelID);
                 uTool.setBlockId(lZ%chunksize, altitude-3, lZ/chunksize, chunksize, chunks, gravelID);
             }
+            else{
+                riverMap[lZ] = 1;
+            }
         }
+
+        chunks[0].MapChunk.MapRegion.SetModdata<int[]>("Alpine_RiverMap", riverMap);
     }    
     public void clearGlacier(IServerChunk[] chunks, int rockID, int glacierID, int snowID){
         int posY;

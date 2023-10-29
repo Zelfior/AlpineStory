@@ -5,12 +5,13 @@ using Vintagestory.API.Server;
 using Vintagestory.ServerMods;
 using System.Threading.Tasks;
 using SkiaSharp;
+using System.Linq;
+using Vintagestory.API.Util;
 
 public class AlpineStrata: ModStdWorldGen
 {
     ICoreServerAPI api;
     int maxThreads;
-    internal SKBitmap height_map;
     internal float data_width_per_pixel;        
     internal int max_height_custom;
     internal int min_height_custom; 
@@ -19,7 +20,7 @@ public class AlpineStrata: ModStdWorldGen
     internal RockStrataConfig strata;
     internal int[] rockIds;
     public AlpineStrata(){}
-    public AlpineStrata(ICoreServerAPI api, SKBitmap height_map, float data_width_per_pixel, int min_height_custom, UtilTool uTool)
+    public AlpineStrata(ICoreServerAPI api, float data_width_per_pixel, int min_height_custom, UtilTool uTool)
     {
         /**
                 This class will replace a layer of 10 blocks of another rock under the surface for a better gameplay experience.
@@ -31,7 +32,6 @@ public class AlpineStrata: ModStdWorldGen
         LoadGlobalConfig(api);
         
         this.api = api;
-        this.height_map = height_map;
 
         maxThreads = Math.Min(Environment.ProcessorCount, api.Server.Config.HostedMode ? 4 : 10);
 
@@ -99,23 +99,9 @@ public class AlpineStrata: ModStdWorldGen
         }
 
         /*
-            In this loop, we read the maximal height of each X - Z column from the chunks data.
+            Loading back the height map stored by AlpineTerrain
         */
-        int[] maxHeights = new int[chunksize*chunksize];
-        Parallel.For(0, chunksize*chunksize, new ParallelOptions() { MaxDegreeOfParallelism = maxThreads }, chunkIndex2d => {
-            int lX = chunkIndex2d % chunksize;
-            int lZ = chunkIndex2d / chunksize;
-
-            int mapIndex = uTool.ChunkIndex2d(lX, lZ, chunksize);
-            for(int lY = max_height_custom-1; lY > 1 ; lY--){
-                int chunkIndex = uTool.ChunkIndex3d(lX, lY%chunksize, lZ, chunksize);
-
-                if(chunks[lY/chunksize].Data[chunkIndex] == rockIds[0]){ // 0 means the block is empty
-                    maxHeights[chunkIndex2d] = lY - 1;
-                    break;
-                }
-            }
-        });
+        int[] maxHeights = SerializerUtil.Deserialize<int[]>(chunks[0].MapChunk.MapRegion.GetModdata("Alpine_HeightMap"));
 
         //  Setting the value of the rock in the chunks data.
         for (int lZ = 0; lZ < chunksize; lZ++)
