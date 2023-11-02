@@ -62,16 +62,16 @@ public class AlpineTerrain: ModStdWorldGen
         ushort[] terrainheightmap = chunks[0].MapChunk.WorldGenTerrainHeightMap;
 
         //  Storing here the results for each X - Z coordinates (Y being the vertical) of the map pre-processing
-        int[] list_max_height;
+        int[] chunkHeightMap;
+        int[] chunkRiverMap = new int[chunksize*chunksize];
         int[] elementMap ;
 
         int interMountainChunkCount = 15;
 
         MapElementManager MEM = new MapElementManager(api, uTool, chunkX, chunkZ, min_height_custom, max_height_custom, height_maps);
         MapElement[] elements = MEM.getLocalMapElements(interMountainChunkCount, chunkX, chunkZ);
-        (list_max_height, elementMap) = MEM.generateHeightMap(elements, interMountainChunkCount, chunkX, chunkZ);
+        (chunkHeightMap, elementMap) = MEM.generateHeightMap(elements, interMountainChunkCount, chunkX, chunkZ);
 
-        int[] rivers = new int[chunksize*chunksize];
 
         for(int lX=0; lX < chunksize; lX++){
             for(int lZ=0; lZ < chunksize; lZ++){
@@ -98,18 +98,20 @@ public class AlpineTerrain: ModStdWorldGen
                 }
 
                 if (neighbours.Max() != neighbours.Min()){
-                    rivers[uTool.ChunkIndex2d(lX, lZ, chunksize)] = 1;
+                    chunkRiverMap[uTool.ChunkIndex2d(lX, lZ, chunksize)] = 1;
                 }
             }
         }
 
         //  We find here all 2 high gap to increase the height there, it can prevent having 2 blocks wide steps, but is not necessary
-        int[] to_increase = uTool.analyse_chunk(list_max_height, chunkX, chunkZ, chunksize, min_height_custom, max_height_custom, data_width_per_pixel, 0);
+        int[] to_increase = uTool.analyse_chunk(chunkHeightMap, chunkX, chunkZ, chunksize, min_height_custom, max_height_custom, data_width_per_pixel, 0);
 
         for (int lZ = 0; lZ < chunksize*chunksize; lZ++){
             if (to_increase[lZ] == 1){
-                list_max_height[lZ] += 1;
+                chunkHeightMap[lZ] += 1;
             }
+            // if(chunkRiverMap[lZ] == 1)
+            //     chunkHeightMap[lZ] -= 3;
         }
         
         //  For each X - Z coordinate of the chunk, storing the data in the column result. Multithreaded for faster process
@@ -122,10 +124,7 @@ public class AlpineTerrain: ModStdWorldGen
             for (int posY = 1; posY < max_height_custom - 1; posY++)
             {
                 //  The block solidity tells if the block will not be empty after the first pass.
-                if(rivers[chunkIndex2d] == 0)
-                    columnBlockSolidities[posY] = posY < list_max_height[chunkIndex2d];
-                else
-                    columnBlockSolidities[posY] = posY < list_max_height[chunkIndex2d] + 10;
+                columnBlockSolidities[posY] = posY < chunkHeightMap[chunkIndex2d];
             }
         });
 
@@ -139,7 +138,6 @@ public class AlpineTerrain: ModStdWorldGen
 
             The Id to provide can be given by the following function, "rock-granite" being the name of a block for example. 
                 api.World.GetBlock(new AssetLocation("rock-granite")).Id ;
-
         */
         for (int posY = 1; posY < max_height_custom - 1; posY++)
         {
@@ -172,7 +170,8 @@ public class AlpineTerrain: ModStdWorldGen
         /*
             Saving the height map for future uses
         */
-        chunks[0].MapChunk.MapRegion.SetModdata("Alpine_HeightMap", list_max_height);
+        chunks[0].MapChunk.MapRegion.SetModdata("Alpine_HeightMap_"+chunkX.ToString()+"_"+chunkZ.ToString(), chunkHeightMap);
+        chunks[0].MapChunk.MapRegion.SetModdata("Alpine_RiverMap_"+chunkX.ToString()+"_"+chunkZ.ToString(), chunkRiverMap);
 
         ushort ymax = 0;
         for (int i = 0; i < rainheightmap.Length; i++)

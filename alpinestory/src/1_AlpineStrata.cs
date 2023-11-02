@@ -101,7 +101,7 @@ public class AlpineStrata: ModStdWorldGen
         /*
             Loading back the height map stored by AlpineTerrain
         */
-        int[] maxHeights = SerializerUtil.Deserialize<int[]>(chunks[0].MapChunk.MapRegion.GetModdata("Alpine_HeightMap"));
+        int[] maxHeights = SerializerUtil.Deserialize<int[]>(chunks[0].MapChunk.MapRegion.GetModdata("Alpine_HeightMap_"+chunkX.ToString()+"_"+chunkZ.ToString()));
 
         //  Setting the value of the rock in the chunks data.
         for (int lZ = 0; lZ < chunksize; lZ++)

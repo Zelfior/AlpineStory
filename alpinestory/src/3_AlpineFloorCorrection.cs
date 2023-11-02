@@ -4,6 +4,7 @@ using Vintagestory.API.Server;
 using Vintagestory.ServerMods;
 using SkiaSharp;
 using System.Linq;
+using Vintagestory.API.Util;
 
 public class AlpineFloorCorrection: ModStdWorldGen
 {
@@ -80,7 +81,7 @@ public class AlpineFloorCorrection: ModStdWorldGen
         clearGlacier(chunks, rockID, glacierID, snowID);
 
         //  Make river beds
-        // makeRiverBed(chunks, chunkX, chunkZ, waterID, muddyGravelID);
+        makeRiverBed(chunks, chunkX, chunkZ, waterID, muddyGravelID);
 
         //  Make lakes
         // uTool.makeLakes(chunks, chunkX, chunkZ, chunksize, waterID, muddyGravelID, min_height_custom, max_height_custom, data_width_per_pixel, height_map);
@@ -127,43 +128,41 @@ public class AlpineFloorCorrection: ModStdWorldGen
         }            
     }
     public void makeRiverBed(IServerChunk[] chunks, int chunkX, int chunkZ, int waterID, int gravelID){
-        float hasRiver;
         int altitude;
         int localRiverHeight;
-
-        int[] riverMap = new int[chunksize*chunksize];
         
+        /*
+            Loading back the height map stored by AlpineTerrain
+        */
+        int[] chunkHeightMap = SerializerUtil.Deserialize<int[]>(chunks[0].MapChunk.MapRegion.GetModdata("Alpine_HeightMap_"+chunkX.ToString()+"_"+chunkZ.ToString()));
+        int[] chunkRiverMap = SerializerUtil.Deserialize<int[]>(chunks[0].MapChunk.MapRegion.GetModdata("Alpine_RiverMap_"+chunkX.ToString()+"_"+chunkZ.ToString()));
+        int[] chunkRiverHeightMap = new int[chunksize*chunksize];
         //  Filling the river with water, and replaces the ground with two layers of muddy gravel
         //  The water height is taken minimal in its surrounding to not have weird behavior at the surface
-        for (int lZ = 0; lZ < chunksize*chunksize; lZ++){
-            int worldX = chunkX * chunksize + lZ%chunksize+ uTool.offsetX;
-            int worldZ = chunkZ * chunksize + lZ/chunksize + uTool.offsetZ;
+        for (int colId = 0; colId < chunksize*chunksize; colId++){
+            int lX = colId% chunksize;
+            int lZ = colId/ chunksize;
 
-            hasRiver = uTool.LerpPosHeight(worldX, worldZ, 2, data_width_per_pixel, height_map);
+            if(chunkRiverMap[colId] == 1){
+                altitude = chunkHeightMap[colId];
 
-            if(hasRiver > 0.1){
-                altitude = (int) (min_height_custom + (max_height_custom - min_height_custom) * uTool.LerpPosHeight(worldX, worldZ, 0, data_width_per_pixel, height_map));
-
-                localRiverHeight = uTool.getRiverHeight(worldX, worldZ, min_height_custom, max_height_custom, data_width_per_pixel, height_map);
-                riverMap[lZ] = localRiverHeight;
+                localRiverHeight = uTool.getRiverHeight(lX, lZ, chunksize, chunkHeightMap, chunkRiverMap);
 
                 for(int posY = altitude-2; posY < localRiverHeight && posY < api.WorldManager.MapSizeY; posY++){
-                    uTool.setBlockId(lZ%chunksize, posY, lZ/chunksize, chunksize, chunks, waterID, fluid:true);
+                    uTool.setBlockId(colId%chunksize, posY, colId/chunksize, chunksize, chunks, waterID, fluid:true);
                 }
 
                 if (altitude-2 == localRiverHeight && localRiverHeight < api.WorldManager.MapSizeY ){
-                    uTool.setBlockId(lZ%chunksize, localRiverHeight, lZ/chunksize, chunksize, chunks, waterID, fluid:true);
+                    uTool.setBlockId(colId%chunksize, localRiverHeight, colId/chunksize, chunksize, chunks, waterID, fluid:true);
                 }
 
-                uTool.setBlockId(lZ%chunksize, altitude-4, lZ/chunksize, chunksize, chunks, gravelID);
-                uTool.setBlockId(lZ%chunksize, altitude-3, lZ/chunksize, chunksize, chunks, gravelID);
-            }
-            else{
-                riverMap[lZ] = 1;
+                uTool.setBlockId(colId%chunksize, altitude-4, colId/chunksize, chunksize, chunks, gravelID);
+                uTool.setBlockId(colId%chunksize, altitude-3, colId/chunksize, chunksize, chunks, gravelID);
+
+                chunkRiverHeightMap[colId] = localRiverHeight;
             }
         }
-
-        chunks[0].MapChunk.MapRegion.SetModdata<int[]>("Alpine_RiverMap", riverMap);
+        chunks[0].MapChunk.MapRegion.SetModdata("Alpine_RiverHeightMap_"+chunkX.ToString()+"_"+chunkZ.ToString(), chunkRiverHeightMap);
     }    
     public void clearGlacier(IServerChunk[] chunks, int rockID, int glacierID, int snowID){
         int posY;

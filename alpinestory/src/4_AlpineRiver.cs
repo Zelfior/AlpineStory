@@ -3,6 +3,7 @@ using Vintagestory.API.Common;
 using Vintagestory.API.Server;
 using Vintagestory.ServerMods;
 using SkiaSharp;
+using Vintagestory.API.Util;
 
 public class AlpineRiver: ModStdWorldGen
 {
@@ -43,51 +44,50 @@ public class AlpineRiver: ModStdWorldGen
         int waterID = api.World.GetBlock(new AssetLocation("water-still-7")).Id ;
 
         //  Clean river beds
-        // cleanRiverBed(chunks, chunkX, chunkZ, waterID, muddyGravelID);
+        cleanRiverBed(chunks, chunkX, chunkZ, waterID, muddyGravelID);
 
         //  Clean river beds
         // uTool.makeLakes(chunks, chunkX, chunkZ, chunksize, waterID, muddyGravelID, min_height_custom, max_height_custom, data_width_per_pixel, height_map);
-
     }
     public void cleanRiverBed(IServerChunk[] chunks, int chunkX, int chunkZ, int waterID, int gravelID){
-        float hasRiver;
         int altitude;
         int localRiverHeight;
         
-        for (int lZ = 0; lZ < chunksize*chunksize; lZ++){
-            int worldX = chunkX * chunksize + lZ%chunksize+ uTool.offsetX;
-            int worldZ = chunkZ * chunksize + lZ/chunksize + uTool.offsetZ;
+        int[] chunkHeightMap = SerializerUtil.Deserialize<int[]>(chunks[0].MapChunk.MapRegion.GetModdata("Alpine_HeightMap_"+chunkX.ToString()+"_"+chunkZ.ToString()));
+        int[] chunkRiverMap = SerializerUtil.Deserialize<int[]>(chunks[0].MapChunk.MapRegion.GetModdata("Alpine_RiverMap_"+chunkX.ToString()+"_"+chunkZ.ToString()));
+        int[] chunkRiverHeightMap = SerializerUtil.Deserialize<int[]>(chunks[0].MapChunk.MapRegion.GetModdata("Alpine_RiverHeightMap_"+chunkX.ToString()+"_"+chunkZ.ToString()));
+        
+        for (int colId = 0; colId < chunksize*chunksize; colId++){
+            int lX = colId% chunksize;
+            int lZ = colId/ chunksize;
 
-            //  For dark reasons, unpacking Alpine_RiverMap doesn't work...
-            hasRiver = uTool.LerpPosHeight(worldX, worldZ, 2, data_width_per_pixel, height_map);
+            if(chunkRiverMap[colId] == 1){
+                altitude = chunkHeightMap[colId];
 
-            if(hasRiver > 0.1){
-                altitude = (int) (min_height_custom + (max_height_custom - min_height_custom) * uTool.LerpPosHeight(worldX, worldZ, 0, data_width_per_pixel, height_map));
-                
+                localRiverHeight = chunkRiverHeightMap[colId];
+
                 //  Checking if we are not removing a tree
-                if(uTool.getBlockId(lZ%chunksize, altitude-3, lZ/chunksize, chunksize, chunks) == 0 ||
-                    (uTool.getBlockId(lZ%chunksize, altitude-3, lZ/chunksize, chunksize, chunks) != 
-                        uTool.getBlockId(lZ%chunksize, altitude+1, lZ/chunksize, chunksize, chunks))){
-
-                    localRiverHeight = uTool.getRiverHeight(worldX, worldZ, min_height_custom, max_height_custom, data_width_per_pixel, height_map);
+                if(uTool.getBlockId(colId%chunksize, altitude-3, colId/chunksize, chunksize, chunks) == 0 ||
+                    (uTool.getBlockId(colId%chunksize, altitude-3, colId/chunksize, chunksize, chunks) != 
+                        uTool.getBlockId(colId%chunksize, altitude+1, colId/chunksize, chunksize, chunks))){
 
                     for(int posY = altitude-2; posY < Math.Min(localRiverHeight, max_height_custom); posY++){
-                        uTool.SetBlockAir(lZ%chunksize, posY, lZ/chunksize, chunksize, chunks);
-                        uTool.setBlockId(lZ%chunksize, posY, lZ/chunksize, chunksize, chunks, waterID, fluid:true);
+                        uTool.SetBlockAir(colId%chunksize, posY, colId/chunksize, chunksize, chunks);
+                        uTool.setBlockId(colId%chunksize, posY, colId/chunksize, chunksize, chunks, waterID, fluid:true);
                     }
 
                     if (altitude-2 == localRiverHeight){
-                        uTool.SetBlockAir(lZ%chunksize, localRiverHeight, lZ/chunksize, chunksize, chunks);
-                        uTool.setBlockId(lZ%chunksize, localRiverHeight, lZ/chunksize, chunksize, chunks, waterID, fluid:true);
+                        uTool.SetBlockAir(colId%chunksize, localRiverHeight, colId/chunksize, chunksize, chunks);
+                        uTool.setBlockId(colId%chunksize, localRiverHeight, colId/chunksize, chunksize, chunks, waterID, fluid:true);
                     }
 
                     for(int posY = localRiverHeight; posY < Math.Min(localRiverHeight+3, max_height_custom); posY++){
-                        uTool.SetBlockAir(lZ%chunksize, posY, lZ/chunksize, chunksize, chunks);
+                        uTool.SetBlockAir(colId%chunksize, posY, colId/chunksize, chunksize, chunks);
                     }
                 }
 
-                uTool.setBlockId(lZ%chunksize, altitude-4, lZ/chunksize, chunksize, chunks, gravelID);
-                uTool.setBlockId(lZ%chunksize, altitude-3, lZ/chunksize, chunksize, chunks, gravelID);
+                uTool.setBlockId(colId%chunksize, altitude-4, colId/chunksize, chunksize, chunks, gravelID);
+                uTool.setBlockId(colId%chunksize, altitude-3, colId/chunksize, chunksize, chunks, gravelID);
             }
         }
     }    

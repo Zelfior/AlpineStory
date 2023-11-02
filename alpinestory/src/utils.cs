@@ -241,7 +241,7 @@ public class UtilTool
         }
         return miniRegionMap;
     }
-    public int getRiverHeight(int worldX, int worldZ, int min_height_custom, int max_height_custom, float data_width_per_pixel, SKBitmap height_map){
+    public int getRiverHeight(int lX, int lZ, int chunksize, int[] chunkHeightMap, int[] chunkRiverMap){
         /*
             Takes the river height at the (worldX, worldZ) coordinates.
 
@@ -252,21 +252,20 @@ public class UtilTool
 
         for(int i=-radius; i<radius+1; i++){
             for(int j=-radius; j<radius+1; j++){
-                if (LerpPosHeight(worldX + i, worldZ + j, 0, data_width_per_pixel, height_map) > 0){
-                    localRiverHeights[i+radius+(j+radius)*(2*radius+1)] = (int) (min_height_custom + (max_height_custom - min_height_custom) * LerpPosHeight(worldX + i, worldZ + j, 0, data_width_per_pixel, height_map));
+                if (lX + i >= 0 && lX + i < chunksize && lZ + j >= 0 && lZ + j < chunksize && chunkRiverMap[ChunkIndex2d(lX + i, lZ + j, chunksize)] == 1){
+                    localRiverHeights[i+radius+(j+radius)*(2*radius+1)] = chunkHeightMap[ChunkIndex2d(lX + i, lZ + j, chunksize)];
                 }
                 else{
-                    localRiverHeights[i+radius+(j+radius)*(2*radius+1)] = max_height_custom;
+                    localRiverHeights[i+radius+(j+radius)*(2*radius+1)] = 1000;
                 }
             }
         }
 
-        if (localRiverHeights.Min() == max_height_custom)
+        if (localRiverHeights.Min() == 1000)
             return 0;
         else
             return localRiverHeights.Min();
     }
-    
     public void makeLakes(IServerChunk[] chunks, int chunkX, int chunkZ, int chunksize, int waterID, int gravelID, int min_height_custom, int max_height_custom, float data_width_per_pixel, SKBitmap height_map){
         /*
             Fills the potential lakes in the given chunk.
