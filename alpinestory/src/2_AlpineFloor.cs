@@ -3,6 +3,7 @@ using Vintagestory.API.Datastructures;
 using Vintagestory.API.Server;
 using Vintagestory.ServerMods;
 using SkiaSharp;
+using Vintagestory.API.Util;
 
 /*
     Once the rocks landscape is generated, the vanilla world generation will replace the top layers of rock with dirt/sand/gravel,
@@ -104,40 +105,66 @@ public class AlpineFloor: ModStdWorldGen
         int interMountainChunkCount = 15;
         
         MapElementManager MEM = new MapElementManager(api, uTool, chunkX, chunkZ, min_height_custom, max_height_custom, regionMaps);
-        MapElement[] elements = MEM.getLocalMapElements(interMountainChunkCount);
+        MapElement[] elements = MEM.getLocalMapElements(interMountainChunkCount, chunkX, chunkZ);
 
         int[] regionMap = new int[0];
 
         //     Holds a forest density map, from 0 to 255
         IntDataMap2D forestMap = chunks[0].MapChunk.MapRegion.ForestMap; 
+        // forestMap.Data = new int[forestMap.Size*forestMap.Size];
 
         //  build_mini_region_map builds a local region map as understood by the MapRegion tools.
-        int[] forest_height_map = MEM.generateRegionMap(interMountainChunkCount, forestMap, chunkX, chunkZ, globalRegionSize, 1);
+        IntDataMap2D forest_height_map = MEM.generateRegionMap(interMountainChunkCount, forestMap, chunkX, chunkZ, globalRegionSize, 1);
         
         //  If we are in a lake : no forest
         //  The forest takes the vanilla generated value, if the altitude is not too high
         for(int i = 0; i < chunks[0].MapChunk.MapRegion.ForestMap.Data.Length; i++){
             if (true){//(lake_height_map[i] == min_height_custom){
-                forestMap.Data[i] = (int) Math.Clamp(forestMap.Data[i]-1, 
-                                                getForestFromHeight(forest_height_map[i])*0.2, 
-                                                getForestFromHeight(forest_height_map[i])) ;
+                chunks[0].MapChunk.MapRegion.ForestMap.Data[i] = (int) Math.Clamp(forestMap.Data[i]-1, 
+                                                getForestFromHeight(forest_height_map.Data[i])*0.2, 
+                                                getForestFromHeight(forest_height_map.Data[i])) ;
             }
             else{
                 forestMap.Data[i] = 0;
             }
         }
 
+
         //     Holds temperature and rain fall.
         //     16-23 bits = Red = temperature - 0 : frozen, 255 : all hail the cactus. (Height dependance strongly adds to this parameter)
         //     8-15 bits = Green = rain
         //     0-7 bits = Blue = unused 
         IntDataMap2D climateMap = chunks[0].MapChunk.MapRegion.ClimateMap;
-        climateMap.Data = MEM.generateRegionMap(interMountainChunkCount, climateMap, chunkX, chunkZ, globalRegionSize, 1);
+        IntDataMap2D thing = MEM.generateRegionMap(interMountainChunkCount, climateMap, chunkX, chunkZ, globalRegionSize, 1);
 
-        for(int i = 0; i < climateMap.Data.Length; i++){
-            climateMap.Data[i] = (int)(0 + getRainFromHeight(climateMap.Data[i])*Math.Pow(2, 8) +  Math.Clamp(getTemperatureFromHeight(climateMap.Data[i]), 0, 255)*Math.Pow(2, 16)) ;
-        }
+        // SKBitmap map = new SKBitmap(climateMap.Size, climateMap.Size);
         
+        // int regionSize = thing.Size;
+
+        // if (chunkX % regionSize == 0 && chunkZ % regionSize == 0){
+        //     for(int i = 0; i < regionSize; i++){
+        //         for(int j = 0; j < regionSize; j++){
+        //             map.SetPixel(i, j, new SKColor((byte)thing.GetInt(i, j), (byte)thing.GetInt(i, j), (byte)thing.GetInt(i, j)));
+        //             thing.SetInt(i, j, (int)(thing.GetInt(i, j)*255*255));
+        //         }
+        //     }
+        //     int worldx = chunkX*chunksize;
+        //     map.Save("climate_map_"+chunkX.ToString()+"_"+chunkZ.ToString()+"_"+worldx.ToString()+".png");
+        // }
+        // else{
+        //     for(int i = 0; i < regionSize; i++){
+        //         for(int j = 0; j < regionSize; j++){
+        //             thing.SetInt(i, j, (int)(thing.GetInt(i, j)*255*255));
+        //         }
+        //     }
+        // }
+        
+        // chunks[0].MapChunk.MapRegion.ClimateMap = thing;
+        for(int i = 0; i < climateMap.Data.Length; i++){
+            climateMap.Data[i] = (int)(0 + getRainFromHeight(thing.Data[i])*Math.Pow(2, 8) +  Math.Clamp(getTemperatureFromHeight(thing.Data[i]), 0, 255)*Math.Pow(2, 16)) ;
+        }
+        chunks[0].MapChunk.MapRegion.ClimateMap = climateMap;
+
         //     Holds a beach density map
         //     No beach here, so all array set to 0
         IntDataMap2D beachMap = chunks[0].MapChunk.MapRegion.BeachMap;
@@ -146,10 +173,11 @@ public class AlpineFloor: ModStdWorldGen
         //     Bushes density map, from 0 to 255
         //     The bushes density decreases with height
         IntDataMap2D shrubMap = chunks[0].MapChunk.MapRegion.ShrubMap;
-        shrubMap.Data = MEM.generateRegionMap(interMountainChunkCount, shrubMap, chunkX, chunkZ, globalRegionSize, (float)0.5);
+        shrubMap.Data = new int[shrubMap.Size*shrubMap.Size];
+        chunks[0].MapChunk.MapRegion.ShrubMap = MEM.generateRegionMap(interMountainChunkCount, shrubMap, chunkX, chunkZ, globalRegionSize, (float)0.5);
 
         for(int i = 0; i < shrubMap.Data.Length; i++){
-            shrubMap.Data[i] = (int)getShrubFromHeight(shrubMap.Data[i]) ;
+            chunks[0].MapChunk.MapRegion.ShrubMap.Data[i] = (int)getShrubFromHeight(chunks[0].MapChunk.MapRegion.ShrubMap.Data[i]) ;
         }
     }
     private float getRelativeHeight(int height){

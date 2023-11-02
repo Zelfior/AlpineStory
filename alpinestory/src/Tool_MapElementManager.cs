@@ -6,7 +6,7 @@ using Vintagestory.API.Server;
 public class MapElementManager
 {
     internal ICoreServerAPI api;
-    internal int chunkX, chunkZ, min_height_custom, max_height_custom;
+    internal int min_height_custom, max_height_custom;
     internal UtilTool uTool;
     internal SKBitmap[] height_maps;
     internal int chunksize;
@@ -15,8 +15,6 @@ public class MapElementManager
         this.uTool = uTool;
         this.height_maps = height_maps;
 
-        this.chunkX = chunkX;
-        this.chunkZ = chunkZ;
         this.min_height_custom = min_height_custom;
         this.max_height_custom = max_height_custom;
 
@@ -29,17 +27,17 @@ public class MapElementManager
         Random rand = new Random(getSeed(X, Z));
 
         return new MapElement(api, 
-                                                uTool, 
-                                                X*chunksize, 
-                                                Z*chunksize, 
-                                                (float)(rand.NextDouble() * Math.PI * 2),
-                                                new int[0], 
-                                                dataMaps[0].Width, 
-                                                1, 
-                                                rand.Next((int)(0.5*(max_height_custom - min_height_custom)), max_height_custom - min_height_custom), 
-                                                dataMaps[rand.Next(dataMaps.Length - 1)]);
+                                    uTool, 
+                                    X*chunksize, 
+                                    Z*chunksize, 
+                                    (float)(rand.NextDouble() * Math.PI * 2),
+                                    new int[0], 
+                                    dataMaps[0].Width, 
+                                    1, 
+                                    rand.Next((int)(0.5*(max_height_custom - min_height_custom)), max_height_custom - min_height_custom), 
+                                    dataMaps[rand.Next(dataMaps.Length - 1)]);
     }
-    public MapElement[] getLocalMapElements(int interMountainChunkCount){
+    public MapElement[] getLocalMapElements(int interMountainChunkCount, int chunkX, int chunkZ){
         int lowX = chunkX - uTool.mod(chunkX, interMountainChunkCount); 
         int highX = chunkX - uTool.mod(chunkX, interMountainChunkCount) + interMountainChunkCount; 
         int lowZ = chunkZ - uTool.mod(chunkZ, interMountainChunkCount); 
@@ -55,74 +53,79 @@ public class MapElementManager
 
         return new MapElement[4] {SWElement, SEElement, NWElement, NEElement};
     }
-    public (int[], int[]) generateHeightMap(MapElement[] mapElements, int interMountainChunkCount){
-        int[] heightMap = new int[chunksize*chunksize];
-        int[] elementMap = new int[chunksize*chunksize];
-
+    (int, int) getHighestValue(MapElement[] mapElements, int interMountainChunkCount, int chunkX, int chunkZ, int x, int z, int chunkS){
         int lowX = chunkX - uTool.mod(chunkX, interMountainChunkCount); 
         int highX = chunkX - uTool.mod(chunkX, interMountainChunkCount) + interMountainChunkCount; 
         int lowZ = chunkZ - uTool.mod(chunkZ, interMountainChunkCount); 
         int highZ = chunkZ - uTool.mod(chunkZ, interMountainChunkCount) + interMountainChunkCount; 
 
-        float h00, h10, h01, h11;
-        int worldx, worldz;
+        int worldx = chunkX*chunkS + x;
+        int worldz = chunkZ*chunkS + z;
+
+        float h00 = mapElements[0].getPosHeight(lowX*chunkS - worldx, lowZ*chunkS - worldz);
+        float h01 = mapElements[1].getPosHeight(highX*chunkS - worldx, lowZ*chunkS - worldz);
+        float h10 = mapElements[2].getPosHeight(lowX*chunkS - worldx, highZ*chunkS - worldz);
+        float h11 = mapElements[3].getPosHeight(highX*chunkS - worldx, highZ*chunkS - worldz);
+
+        float maxVal = (new float[]{h00, h10, h01, h11}).Max();
+        int mountainIndicator = 0;
+
+        if (maxVal == h00)
+            mountainIndicator=lowX+ 10*lowZ;
+        else if (maxVal == h10)
+            mountainIndicator=highX+ 10*lowZ;
+        else if (maxVal == h01)
+            mountainIndicator=lowX+ 10*highZ;
+        else if (maxVal == h11)
+            mountainIndicator=highX+ 10*highZ;
+        
+        return (min_height_custom + (int)maxVal, mountainIndicator);
+    }
+    public (int[], int[]) generateHeightMap(MapElement[] mapElements, int interMountainChunkCount, int chunkX, int chunkZ){
+        int[] heightMap = new int[chunksize*chunksize];
+        int[] elementMap = new int[chunksize*chunksize];
 
         for(int x = 0; x < chunksize; x++){
             for(int z = 0; z < chunksize; z++){
                 int i = uTool.ChunkIndex2d(x, z, chunksize);
-                worldx = chunkX*chunksize + x;
-                worldz = chunkZ*chunksize + z;
 
-                h00 = mapElements[0].getPosHeight(lowX*chunksize - worldx, lowZ*chunksize - worldz);
-                h01 = mapElements[1].getPosHeight(highX*chunksize - worldx, lowZ*chunksize - worldz);
-                h10 = mapElements[2].getPosHeight(lowX*chunksize - worldx, highZ*chunksize - worldz);
-                h11 = mapElements[3].getPosHeight(highX*chunksize - worldx, highZ*chunksize - worldz);
-
-                heightMap[i] = min_height_custom + (int)(new float[]{h00, h10, h01, h11}).Max();
-                elementMap[uTool.ChunkIndex2d(x, z, chunksize)] = Array.IndexOf(new float[]{h00, h10, h01, h11}, heightMap[i]);
+                (heightMap[i], elementMap[i]) = getHighestValue(mapElements, interMountainChunkCount, chunkX, chunkZ, x, z, chunksize);
             }
         }
 
         return (heightMap, elementMap);
     }
-    int getMaxInChunk(MapElement[] mapElements, int interMountainChunkCount, int X, int Z){
-        int current_chunkX = chunkX;
-        int current_chunkZ = chunkZ;
-
-        int[] heightMap;
-        int[] elementMap ;
-
-        chunkX = X;
-        chunkZ = Z;
-        (heightMap, elementMap) = generateHeightMap(mapElements, interMountainChunkCount);
-
-        chunkX = current_chunkX;
-        chunkZ = current_chunkZ;
-
-        return heightMap.Max();
-    }
-    public int[] generateRegionMap(int interMountainChunkCount, IntDataMap2D referenceMap, int chunkX, int chunkZ, int globalRegionSize, float ratio){
+    public IntDataMap2D generateRegionMap(int interMountainChunkCount, IntDataMap2D referenceMap, int chunkX, int chunkZ, int globalRegionSize, float ratio){
         MapElement[] mapElements;
         int regionSize = referenceMap.Size;
+        int innerRegionSize = referenceMap.InnerSize;
         int regionOffset = referenceMap.TopLeftPadding;
-        
-        int[] miniRegionMap = new int[regionSize*regionSize];
 
-        for(int i = 0; i < miniRegionMap.Length; i++){
-            int current_chunkX = chunkX;
-            int current_chunkZ = chunkZ;
+        float h00, h10, h01, h11;
+        int fakeChunkX, fakeChunkZ, lowX, lowZ, highX, highZ;
 
-            int fakeChunkX = (int)(chunkX + (- uTool.mod(chunkX, globalRegionSize) - regionOffset + i%regionSize)*ratio);
-            int fakeChunkZ = (int)(chunkZ + (- uTool.mod(chunkZ, globalRegionSize) - regionOffset + i/regionSize)*ratio);
-            
-            mapElements = getLocalMapElements(interMountainChunkCount);
-            miniRegionMap[i] = getMaxInChunk(mapElements, interMountainChunkCount, fakeChunkX, fakeChunkZ);
+        for(int i = 0; i < regionSize; i++){
+            for(int j = 0; j < regionSize; j++){
+                fakeChunkX = (int)(chunkX - uTool.mod(chunkX, innerRegionSize) - regionOffset*ratio + i*ratio);
+                fakeChunkZ = (int)(chunkZ - uTool.mod(chunkZ, innerRegionSize) - regionOffset*ratio + j*ratio);
 
-            chunkX = current_chunkX;
-            chunkZ = current_chunkZ;
+                lowX = fakeChunkX - uTool.mod(fakeChunkX, interMountainChunkCount); 
+                highX = fakeChunkX - uTool.mod(fakeChunkX, interMountainChunkCount) + interMountainChunkCount; 
+                lowZ = fakeChunkZ - uTool.mod(fakeChunkZ, interMountainChunkCount); 
+                highZ = fakeChunkZ - uTool.mod(fakeChunkZ, interMountainChunkCount) + interMountainChunkCount; 
+
+                mapElements = getLocalMapElements(interMountainChunkCount, fakeChunkX, fakeChunkZ);
+
+                h00 = mapElements[0].getPosHeight(lowX - fakeChunkX, lowZ - fakeChunkZ);
+                h01 = mapElements[1].getPosHeight(highX - fakeChunkX, lowZ - fakeChunkZ);
+                h10 = mapElements[2].getPosHeight(lowX - fakeChunkX, highZ - fakeChunkZ);
+                h11 = mapElements[3].getPosHeight(highX - fakeChunkX, highZ - fakeChunkZ);
+
+                referenceMap.SetInt(i, j, min_height_custom + (int)(new float[]{h00, h10, h01, h11}).Max());
+            }
         }
-        // Array.Reverse(miniRegionMap);
-        return miniRegionMap;
+        // Array.Reverse(referenceMap.Data);
+        return referenceMap;
     }
     public int[] generateRegionMap_2(MapElement[] mapElements, int interMountainChunkCount, IntDataMap2D referenceMap, int chunkX, int chunkZ){
         int regionSize = referenceMap.Size;

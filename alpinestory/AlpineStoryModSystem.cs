@@ -133,9 +133,17 @@ namespace AlpineStoryMod
                     
                     // pixels[dz * wdt + dx] = ColorUtil.ColorFromRgba(precipi, precipi, precipi, 255);
                     int[] averageHeights = uTool.build_region_map(heightMaps[i], api.WorldManager.ChunkSize, data_width_per_pixel, min_height_custom, api.WorldManager.MapSizeY, 0);
-                    Array.Reverse(averageHeights);
+                    // Array.Reverse(averageHeights);
                     regionMaps[i] = new SKBitmap(heightMaps[i].Width/api.WorldManager.ChunkSize, heightMaps[i].Width/api.WorldManager.ChunkSize);
-                    regionMaps[i].SetPixels(averageHeights);
+                    
+                    for(int k = 0; k < heightMaps[i].Width/api.WorldManager.ChunkSize; k++){
+                        for(int l = 0; l < heightMaps[i].Width/api.WorldManager.ChunkSize; l++){
+                            int index = uTool.ChunkIndex2d(k, l, heightMaps[i].Width/api.WorldManager.ChunkSize);
+                            int localValue = Math.Clamp(averageHeights[index], 0, 255);
+                            regionMaps[i].SetPixel(k, l, new SKColor((byte)localValue, (byte)localValue, (byte)localValue));
+                        }
+                    }
+                    // regionMaps[i].Save("extracted_map_"+(i+1).ToString()+".png");
                 }
 
 
@@ -187,4 +195,9 @@ namespace AlpineStoryMod
             LoadGlobalConfig(api);
         }
     }
+
+    internal class BlockAccessor
+    {
+    }
+
 }

@@ -24,9 +24,8 @@ public class MapElement
         this.imageData = imageData;
     }
     public float getPosHeight(int relativeX, int relativeZ){
-                
-        double R = Math.Sqrt(relativeX*relativeX + relativeZ*relativeZ);
-        double theta = Math.Atan2(relativeZ, relativeX);
+        double R = Math.Sqrt((relativeX+0.5)*(relativeX+0.5) + (relativeZ+0.5)*(relativeZ+0.5));
+        double theta = Math.Atan2((relativeZ+0.5), (relativeX+0.5));
 
         int newX = (int)(R*Math.Cos(theta+rotation));
         int newY = (int)(R*Math.Sin(theta+rotation));

@@ -68,8 +68,40 @@ public class AlpineTerrain: ModStdWorldGen
         int interMountainChunkCount = 15;
 
         MapElementManager MEM = new MapElementManager(api, uTool, chunkX, chunkZ, min_height_custom, max_height_custom, height_maps);
-        MapElement[] elements = MEM.getLocalMapElements(interMountainChunkCount);
-        (list_max_height, elementMap) = MEM.generateHeightMap(elements, interMountainChunkCount);
+        MapElement[] elements = MEM.getLocalMapElements(interMountainChunkCount, chunkX, chunkZ);
+        (list_max_height, elementMap) = MEM.generateHeightMap(elements, interMountainChunkCount, chunkX, chunkZ);
+
+        int[] rivers = new int[chunksize*chunksize];
+
+        for(int lX=0; lX < chunksize; lX++){
+            for(int lZ=0; lZ < chunksize; lZ++){
+                int[] neighbours = new int[4];
+
+                if ((lX - 1 >= 0) && (lZ - 1 >= 0)){
+                    neighbours[0] = elementMap[uTool.ChunkIndex2d(lX-1, lZ-1, chunksize)];
+                }
+                
+                if ((lX - 1 >= 0) && (lZ + 1 < chunksize)){
+                    neighbours[1] = elementMap[uTool.ChunkIndex2d(lX-1, lZ+1, chunksize)];
+                }
+
+                if ((lX + 1 < chunksize) && (lZ + 1 < chunksize)){
+                    neighbours[2] = elementMap[uTool.ChunkIndex2d(lX+1, lZ+1, chunksize)];
+                }
+
+                if ((lX + 1 < chunksize) && (lZ - 1 >= 0)){
+                    neighbours[3] = elementMap[uTool.ChunkIndex2d(lX+1, lZ-1, chunksize)];
+                }
+
+                for(int i=0; i<4; i++){
+                    if(neighbours[i] == 0) neighbours[i] = elementMap[uTool.ChunkIndex2d(lX, lZ, chunksize)];
+                }
+
+                if (neighbours.Max() != neighbours.Min()){
+                    rivers[uTool.ChunkIndex2d(lX, lZ, chunksize)] = 1;
+                }
+            }
+        }
 
         //  We find here all 2 high gap to increase the height there, it can prevent having 2 blocks wide steps, but is not necessary
         int[] to_increase = uTool.analyse_chunk(list_max_height, chunkX, chunkZ, chunksize, min_height_custom, max_height_custom, data_width_per_pixel, 0);
@@ -87,10 +119,13 @@ public class AlpineTerrain: ModStdWorldGen
 
             BitArray columnBlockSolidities = columnResults[chunkIndex2d].ColumnBlockSolidities;
 
-            for (int posY = 1; posY < max_height_custom - 1; posY++)//80; posY++)
+            for (int posY = 1; posY < max_height_custom - 1; posY++)
             {
                 //  The block solidity tells if the block will not be empty after the first pass.
-                columnBlockSolidities[posY] = posY < list_max_height[chunkIndex2d];
+                if(rivers[chunkIndex2d] == 0)
+                    columnBlockSolidities[posY] = posY < list_max_height[chunkIndex2d];
+                else
+                    columnBlockSolidities[posY] = posY < list_max_height[chunkIndex2d] + 10;
             }
         });
 
