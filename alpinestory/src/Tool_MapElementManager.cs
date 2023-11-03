@@ -81,13 +81,13 @@ public class MapElementManager
         
         return (min_height_custom + (int)maxVal, mountainIndicator);
     }
-    public (int[], int[]) generateHeightMap(MapElement[] mapElements, int interMountainChunkCount, int chunkX, int chunkZ){
-        int[] heightMap = new int[chunksize*chunksize];
-        int[] elementMap = new int[chunksize*chunksize];
+    public (int[], int[]) generateHeightMap(MapElement[] mapElements, int interMountainChunkCount, int chunkX, int chunkZ, int margin){
+        int[] heightMap = new int[(chunksize + 2*margin)*(chunksize + 2*margin)];
+        int[] elementMap = new int[(chunksize + 2*margin)*(chunksize + 2*margin)];
 
-        for(int x = 0; x < chunksize; x++){
-            for(int z = 0; z < chunksize; z++){
-                int i = uTool.ChunkIndex2d(x, z, chunksize);
+        for(int x = -margin; x < chunksize + margin; x++){
+            for(int z = -margin; z < chunksize + margin; z++){
+                int i = uTool.ChunkIndex2d(x + margin, z + margin, chunksize + margin*2);
 
                 (heightMap[i], elementMap[i]) = getHighestValue(mapElements, interMountainChunkCount, chunkX, chunkZ, x, z, chunksize);
             }

@@ -58,8 +58,12 @@ public class UtilTool
         /*
             Sets the block at (lX, lY, lZ) coordinate in a chunk column to an air block.
         */
-        if (lY < api.WorldManager.MapSizeY)
-            chunks[lY/chunksize].Data.SetBlockAir(ChunkIndex3d(lX, lY%chunksize, lZ, chunksize));
+        if (lY < api.WorldManager.MapSizeY){
+            // chunks[lY/chunksize].Data.SetBlockAir(ChunkIndex3d(lX, lY%chunksize, lZ, chunksize));
+            chunks[lY/chunksize].Data[ChunkIndex3d(lX, lY%chunksize, lZ, chunksize)] = 0;
+            chunks[lY/chunksize].Data.SetFluid(ChunkIndex3d(lX, lY%chunksize, lZ, chunksize), 0);
+
+        }
     }
     public int mod(int x, int m) {
         /*
@@ -241,19 +245,18 @@ public class UtilTool
         }
         return miniRegionMap;
     }
-    public int getRiverHeight(int lX, int lZ, int chunksize, int[] chunkHeightMap, int[] chunkRiverMap){
+    public int getRiverHeight(int lX, int lZ, int mapSize, int[] chunkHeightMap, int[] chunkRiverMap, int radius){
         /*
             Takes the river height at the (worldX, worldZ) coordinates.
 
             Returns the minimum within a radius, to prevent artifacts at the water surface.
         */
-        int radius = 2;
         int[] localRiverHeights = new int[(2*radius+1)*(2*radius+1)];
 
         for(int i=-radius; i<radius+1; i++){
             for(int j=-radius; j<radius+1; j++){
-                if (lX + i >= 0 && lX + i < chunksize && lZ + j >= 0 && lZ + j < chunksize && chunkRiverMap[ChunkIndex2d(lX + i, lZ + j, chunksize)] == 1){
-                    localRiverHeights[i+radius+(j+radius)*(2*radius+1)] = chunkHeightMap[ChunkIndex2d(lX + i, lZ + j, chunksize)];
+                if (lX + i >= 0 && lX + i < mapSize && lZ + j >= 0 && lZ + j < mapSize && chunkRiverMap[ChunkIndex2d(lX + i, lZ + j, mapSize)] == 1){
+                    localRiverHeights[i+radius+(j+radius)*(2*radius+1)] = chunkHeightMap[ChunkIndex2d(lX + i, lZ + j, mapSize)];
                 }
                 else{
                     localRiverHeights[i+radius+(j+radius)*(2*radius+1)] = 1000;

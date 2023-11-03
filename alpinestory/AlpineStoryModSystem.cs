@@ -49,6 +49,7 @@ namespace AlpineStoryMod
         SKBitmap[] regionMaps;
         internal float data_width_per_pixel;
         internal int min_height_custom; 
+        AlpineMapGenerator alpineMapGenerator;
         AlpineTerrain alpineTerrain;
         AlpineStrata alpineStrata;
         AlpineFloor alpineFloor;
@@ -172,6 +173,7 @@ namespace AlpineStoryMod
                 }
 
                 //  Creating an instance of each generation function
+                alpineMapGenerator = new AlpineMapGenerator(api, heightMaps, data_width_per_pixel, min_height_custom, uTool);
                 alpineTerrain = new AlpineTerrain(api, heightMaps, data_width_per_pixel, min_height_custom, uTool);
                 alpineStrata = new AlpineStrata(api, data_width_per_pixel, min_height_custom, uTool);
                 alpineFloor = new AlpineFloor(api, data_width_per_pixel, min_height_custom, temperature_bias, regionMaps, uTool);
@@ -179,11 +181,12 @@ namespace AlpineStoryMod
                 alpineRiver = new AlpineRiver(api, height_map, data_width_per_pixel, min_height_custom, uTool);
 
                 //  Registering the generation function in the Terrain pass. It is not necessary to have them stored in different files.
+                api.Event.ChunkColumnGeneration(alpineMapGenerator.OnChunkColumnGen, EnumWorldGenPass.Terrain, "standard");
                 api.Event.ChunkColumnGeneration(alpineTerrain.OnChunkColumnGen, EnumWorldGenPass.Terrain, "standard");
                 api.Event.ChunkColumnGeneration(alpineStrata.OnChunkColumnGen, EnumWorldGenPass.Terrain, "standard");
                 api.Event.ChunkColumnGeneration(alpineFloor.OnChunkColumnGen, EnumWorldGenPass.Terrain, "standard");
                 api.Event.ChunkColumnGeneration(alpineFloorCorrection.OnChunkColumnGen, EnumWorldGenPass.TerrainFeatures, "standard");
-                api.Event.ChunkColumnGeneration(alpineRiver.OnChunkColumnGen, EnumWorldGenPass.NeighbourSunLightFlood, "standard");
+                api.Event.ChunkColumnGeneration(alpineRiver.OnChunkColumnGen, EnumWorldGenPass.TerrainFeatures, "standard");
             }
 
             //  Don't you dare removing that line, it would silently break some pass of the vanilla world gen.
