@@ -56,9 +56,8 @@ public class AlpineMapGenerator: ModStdWorldGen
         int maxRiverRadius = 4;
 
         //  Storing here the results for each X - Z coordinates (Y being the vertical) of the map pre-processing
-        int[] chunkHeightMap = new int[chunksize*chunksize];
         int[] marginedHeightMap;
-        int[] chunkElementBorders = new int[(chunksize + 2*maxRiverRadius)*(chunksize + 2*maxRiverRadius)];
+        int[] localRiverRadius = new int[(chunksize + 2*maxRiverRadius)*(chunksize + 2*maxRiverRadius)];
         int[] elementMap ;
 
         MapElementManager MEM = new MapElementManager(api, uTool, chunkX, chunkZ, min_height_custom, max_height_custom, height_maps);
@@ -67,6 +66,7 @@ public class AlpineMapGenerator: ModStdWorldGen
         (marginedHeightMap, elementMap) = MEM.generateHeightMap(elements, interMountainChunkCount, chunkX, chunkZ, maxRiverRadius);
 
         //  Setting the chunk height map.
+        int[] chunkHeightMap = new int[chunksize*chunksize];
         for(int lX=0; lX < chunksize; lX++){
             for(int lZ=0; lZ < chunksize; lZ++){
                 chunkHeightMap[uTool.ChunkIndex2d(lX, lZ, chunksize)] = marginedHeightMap[uTool.ChunkIndex2d(lX + maxRiverRadius, lZ + maxRiverRadius, chunksize + 2*maxRiverRadius)];
@@ -100,33 +100,36 @@ public class AlpineMapGenerator: ModStdWorldGen
 
                 if (neighbours.Max() != neighbours.Min()){
                     Random r = new Random(neighbours.Min() + neighbours.Max());
-                    chunkElementBorders[uTool.ChunkIndex2d(lX, lZ, chunksize + 2*maxRiverRadius)] = r.Next(0, 4);
+                    localRiverRadius[uTool.ChunkIndex2d(lX, lZ, chunksize + 2*maxRiverRadius)] = r.Next(0, 4);
 
-                    if (chunkElementBorders[uTool.ChunkIndex2d(lX, lZ, chunksize + 2*maxRiverRadius)] == 1)
-                        chunkElementBorders[uTool.ChunkIndex2d(lX, lZ, chunksize + 2*maxRiverRadius)] = 0;
+                    if (localRiverRadius[uTool.ChunkIndex2d(lX, lZ, chunksize + 2*maxRiverRadius)] == 1)
+                        localRiverRadius[uTool.ChunkIndex2d(lX, lZ, chunksize + 2*maxRiverRadius)] = 0;
                 }
             }
         }
 
         //  Loop on each lX, lZ values
         bool toBreak;
-        int[] chunkRiverMap = new int[chunksize*chunksize];
-        int[] chunkRadiusMap = new int[chunksize*chunksize];
+        int[] riverMap = new int[(chunksize + 2*maxRiverRadius)*(chunksize + 2*maxRiverRadius)];
+        // int[] chunkRadiusMap = new int[chunksize*chunksize];
 
-        for(int lX=0; lX < chunksize; lX++){
-            for(int lZ=0; lZ < chunksize; lZ++){
+        for(int lX=0; lX < chunksize + 2*maxRiverRadius; lX++){
+            for(int lZ=0; lZ < chunksize + 2*maxRiverRadius; lZ++){
                 toBreak = false;
                 for(int x=-maxRiverRadius; x < maxRiverRadius+1; x++){
                     int zval = (int)Math.Sqrt(maxRiverRadius*maxRiverRadius - x*x);
 
                     for(int z=-zval; z < zval+1; z++){
-                        int colId = uTool.ChunkIndex2d(lX + x + maxRiverRadius, lZ + z + maxRiverRadius, chunksize + 2*maxRiverRadius);
-                        if (chunkElementBorders[colId] > 0
-                                && Math.Sqrt(x*x + z*z) <= riverWidth(chunkElementBorders[colId], marginedHeightMap[colId])){
-                            chunkRiverMap[uTool.ChunkIndex2d(lX, lZ, chunksize)] = 1;
-                            chunkRadiusMap[uTool.ChunkIndex2d(lX, lZ, chunksize)] = riverWidth(chunkElementBorders[colId], marginedHeightMap[colId]);
-                            toBreak = true;
-                            break;
+                        int colId = uTool.ChunkIndex2d(lX + x, lZ + z, chunksize + 2*maxRiverRadius);
+
+                        if (lX + x >= 0 && lX + x < chunksize + 2*maxRiverRadius && lZ + z >= 0 && lZ + z < chunksize + 2*maxRiverRadius){
+                            if (localRiverRadius[colId] > 0
+                                    && Math.Sqrt(x*x + z*z) <= riverWidth(localRiverRadius[colId], marginedHeightMap[colId])){
+                                riverMap[uTool.ChunkIndex2d(lX, lZ, chunksize + 2*maxRiverRadius)] = 1;
+                                // chunkRadiusMap[uTool.ChunkIndex2d(lX, lZ, chunksize)] = riverWidth(chunkElementBorders[colId], marginedHeightMap[colId]);
+                                toBreak = true;
+                                break;
+                            }
                         }
                     }
 
@@ -146,20 +149,20 @@ public class AlpineMapGenerator: ModStdWorldGen
             }
         }
 
-        int[] chunkRiverHeightMap = new int[chunksize*chunksize];
-        for (int colId = 0; colId < chunksize*chunksize; colId++){
-            int lX = colId% chunksize;
-            int lZ = colId/ chunksize;
+        int[] riverHeightMap = new int[(chunksize + 2*maxRiverRadius)*(chunksize + 2*maxRiverRadius)];
+        for (int colId = 0; colId < (chunksize + 2*maxRiverRadius)*(chunksize + 2*maxRiverRadius); colId++){
+            int lX = colId% (chunksize + 2*maxRiverRadius);
+            int lZ = colId/ (chunksize + 2*maxRiverRadius);
 
-            if(chunkRiverMap[colId] == 1){
-                chunkRiverHeightMap[colId] = uTool.getRiverHeight(lX, lZ, chunksize, chunkHeightMap, chunkRiverMap, maxRiverRadius);
+            if(riverMap[colId] == 1){
+                riverHeightMap[colId] = uTool.getRiverHeight(lX, lZ, chunksize + 2*maxRiverRadius, marginedHeightMap, riverMap, maxRiverRadius);
 
-                if (chunkRiverHeightMap[colId] == 1000)
-                    chunkRiverHeightMap[colId] = chunkHeightMap[colId];
+                if (riverHeightMap[colId] == 1000)
+                    riverHeightMap[colId] = marginedHeightMap[colId];
             }
         }
         
-        int[] newChunkRiverHeightMap = new int[chunksize*chunksize];
+        int[] chunkRiverHeightMap = new int[chunksize*chunksize];
         int localValue, count;
         for(int lX=0; lX < chunksize; lX++){
             for(int lZ=0; lZ < chunksize; lZ++){
@@ -167,14 +170,26 @@ public class AlpineMapGenerator: ModStdWorldGen
                 count = 0;
                 for(int x=-maxRiverRadius; x < maxRiverRadius+1; x++){
                     for(int z=-maxRiverRadius; z < maxRiverRadius+1; z++){
-                        int colId = uTool.ChunkIndex2d(lX + x, lZ + z, chunksize);
-                        if (lX + x >= 0 && lX + x < chunksize && lZ + z >= 0 && lZ + z < chunksize && chunkRiverMap[colId] == 1){
-                            localValue += chunkRiverHeightMap[colId];
+                        int colId = uTool.ChunkIndex2d(lX + x + maxRiverRadius, lZ + z + maxRiverRadius, chunksize + 2*maxRiverRadius);
+                        if (lX + x + maxRiverRadius>= 0 && 
+                                lX + x + maxRiverRadius < chunksize + 2*maxRiverRadius && 
+                                lZ + z + maxRiverRadius >= 0 && 
+                                lZ + z + maxRiverRadius < chunksize + 2*maxRiverRadius && 
+                                riverMap[colId] == 1){
+                            localValue += riverHeightMap[colId];
                             count += 1;
                         }
                     }
                 }
-                newChunkRiverHeightMap[uTool.ChunkIndex2d(lX, lZ, chunksize)] = (int) ((float)localValue/count);
+                chunkRiverHeightMap[uTool.ChunkIndex2d(lX, lZ, chunksize)] = (int) ((float)localValue/count);
+            }
+        }
+
+        int[] chunkRiverMap = new int[chunksize*chunksize];
+        //  Setting the chunk height map.
+        for(int lX=0; lX < chunksize; lX++){
+            for(int lZ=0; lZ < chunksize; lZ++){
+                chunkRiverMap[uTool.ChunkIndex2d(lX, lZ, chunksize)] = riverMap[uTool.ChunkIndex2d(lX + maxRiverRadius, lZ + maxRiverRadius, chunksize + 2*maxRiverRadius)];
             }
         }
 
@@ -183,6 +198,6 @@ public class AlpineMapGenerator: ModStdWorldGen
         */
         chunks[0].MapChunk.MapRegion.SetModdata("Alpine_HeightMap_"+chunkX.ToString()+"_"+chunkZ.ToString(), chunkHeightMap);
         chunks[0].MapChunk.MapRegion.SetModdata("Alpine_RiverMap_"+chunkX.ToString()+"_"+chunkZ.ToString(), chunkRiverMap);
-        chunks[0].MapChunk.MapRegion.SetModdata("Alpine_RiverHeightMap_"+chunkX.ToString()+"_"+chunkZ.ToString(), newChunkRiverHeightMap);
+        chunks[0].MapChunk.MapRegion.SetModdata("Alpine_RiverHeightMap_"+chunkX.ToString()+"_"+chunkZ.ToString(), chunkRiverHeightMap);
     }
 }
