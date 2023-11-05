@@ -100,7 +100,10 @@ public class AlpineMapGenerator: ModStdWorldGen
 
                 if (neighbours.Max() != neighbours.Min()){
                     Random r = new Random(neighbours.Min() + neighbours.Max());
-                    chunkElementBorders[uTool.ChunkIndex2d(lX, lZ, chunksize + 2*maxRiverRadius)] = r.Next(0, 3);
+                    chunkElementBorders[uTool.ChunkIndex2d(lX, lZ, chunksize + 2*maxRiverRadius)] = r.Next(0, 4);
+
+                    if (chunkElementBorders[uTool.ChunkIndex2d(lX, lZ, chunksize + 2*maxRiverRadius)] == 1)
+                        chunkElementBorders[uTool.ChunkIndex2d(lX, lZ, chunksize + 2*maxRiverRadius)] = 0;
                 }
             }
         }
@@ -149,14 +152,37 @@ public class AlpineMapGenerator: ModStdWorldGen
             int lZ = colId/ chunksize;
 
             if(chunkRiverMap[colId] == 1){
-                chunkRiverHeightMap[colId] = uTool.getRiverHeight(lX, lZ, chunksize, chunkHeightMap, chunkRiverMap, Math.Max(chunkRadiusMap[colId]*2, 2));
+                chunkRiverHeightMap[colId] = uTool.getRiverHeight(lX, lZ, chunksize, chunkHeightMap, chunkRiverMap, maxRiverRadius);
+
+                if (chunkRiverHeightMap[colId] == 1000)
+                    chunkRiverHeightMap[colId] = chunkHeightMap[colId];
             }
         }
+        
+        int[] newChunkRiverHeightMap = new int[chunksize*chunksize];
+        int localValue, count;
+        for(int lX=0; lX < chunksize; lX++){
+            for(int lZ=0; lZ < chunksize; lZ++){
+                localValue = 0;
+                count = 0;
+                for(int x=-maxRiverRadius; x < maxRiverRadius+1; x++){
+                    for(int z=-maxRiverRadius; z < maxRiverRadius+1; z++){
+                        int colId = uTool.ChunkIndex2d(lX + x, lZ + z, chunksize);
+                        if (lX + x >= 0 && lX + x < chunksize && lZ + z >= 0 && lZ + z < chunksize && chunkRiverMap[colId] == 1){
+                            localValue += chunkRiverHeightMap[colId];
+                            count += 1;
+                        }
+                    }
+                }
+                newChunkRiverHeightMap[uTool.ChunkIndex2d(lX, lZ, chunksize)] = (int) ((float)localValue/count);
+            }
+        }
+
         /*
             Saving the height map for future uses
         */
         chunks[0].MapChunk.MapRegion.SetModdata("Alpine_HeightMap_"+chunkX.ToString()+"_"+chunkZ.ToString(), chunkHeightMap);
         chunks[0].MapChunk.MapRegion.SetModdata("Alpine_RiverMap_"+chunkX.ToString()+"_"+chunkZ.ToString(), chunkRiverMap);
-        chunks[0].MapChunk.MapRegion.SetModdata("Alpine_RiverHeightMap_"+chunkX.ToString()+"_"+chunkZ.ToString(), chunkRiverHeightMap);
+        chunks[0].MapChunk.MapRegion.SetModdata("Alpine_RiverHeightMap_"+chunkX.ToString()+"_"+chunkZ.ToString(), newChunkRiverHeightMap);
     }
 }

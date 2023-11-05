@@ -97,10 +97,6 @@ public class AlpineFloor: ModStdWorldGen
     {
         //  This value tells how many chunks are in a "region"
         int globalRegionSize = api.WorldManager.RegionSize / chunksize;
-
-        //  Offsetting the chunk by the same offset as defined in AlpineStoryModModSystem
-        int fakeChunkX = chunkX + uTool.offsetX/chunksize;
-        int fakeChunkZ = chunkZ + uTool.offsetZ/chunksize;
         
         int interMountainChunkCount = 15;
         
@@ -115,14 +111,9 @@ public class AlpineFloor: ModStdWorldGen
         //  If we are in a lake : no forest
         //  The forest takes the vanilla generated value, if the altitude is not too high
         for(int i = 0; i < chunks[0].MapChunk.MapRegion.ForestMap.Data.Length; i++){
-            if (true){//(lake_height_map[i] == min_height_custom){
-                chunks[0].MapChunk.MapRegion.ForestMap.Data[i] = (int) Math.Clamp(forestMap.Data[i]-1, 
-                                                getForestFromHeight(forest_height_map.Data[i])*0.2, 
-                                                getForestFromHeight(forest_height_map.Data[i])) ;
-            }
-            else{
-                forestMap.Data[i] = 0;
-            }
+            chunks[0].MapChunk.MapRegion.ForestMap.Data[i] = (int) Math.Clamp(forestMap.Data[i]-1, 
+                                            getForestFromHeight(forest_height_map.Data[i])*0.5, 
+                                            getForestFromHeight(forest_height_map.Data[i])) ;
         }
 
 

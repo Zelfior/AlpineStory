@@ -82,17 +82,18 @@ public class AlpineRiver: ModStdWorldGen
 
                     int localRiverDepth = riverDepth(2, chunkHeightMap[colId]);
 
-                    for(int i=0; i< localRiverDepth; i++){
-                        uTool.SetBlockAir(colId%chunksize, localRiverHeight - i, colId/chunksize, chunksize, chunks);
-                        uTool.setBlockId(colId%chunksize, localRiverHeight - i, colId/chunksize, chunksize, chunks, waterID, fluid:true);
-                    }
-
                     for(int i=1; i< 10; i++){
                         uTool.SetBlockAir(colId%chunksize, localRiverHeight + i, colId/chunksize, chunksize, chunks);
                     }
 
                     uTool.setBlockId(colId%chunksize, localRiverHeight-localRiverDepth, colId/chunksize, chunksize, chunks, gravelID);
                     uTool.setBlockId(colId%chunksize, localRiverHeight-localRiverDepth-1, colId/chunksize, chunksize, chunks, gravelID);
+                    
+                    for(int i=0; i< localRiverDepth; i++){
+                        uTool.SetBlockAir(colId%chunksize, localRiverHeight - i, colId/chunksize, chunksize, chunks);
+                        uTool.setBlockId(colId%chunksize, localRiverHeight - i, colId/chunksize, chunksize, chunks, waterID, fluid:true);
+                    }
+
                 }
             }
             else if(riverNeightbour(chunkRiverMap, colId%chunksize, colId/chunksize, chunksize)){

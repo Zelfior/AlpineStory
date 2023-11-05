@@ -251,23 +251,54 @@ public class UtilTool
 
             Returns the minimum within a radius, to prevent artifacts at the water surface.
         */
-        int[] localRiverHeights = new int[(2*radius+1)*(2*radius+1)];
+        int i, j, r1, r2;
+        double c,s;
+        
+        int[] min_R = new int[4];
+        int[] min_Z = new int[4];
 
-        for(int i=-radius; i<radius+1; i++){
-            for(int j=-radius; j<radius+1; j++){
-                if (lX + i >= 0 && lX + i < mapSize && lZ + j >= 0 && lZ + j < mapSize && chunkRiverMap[ChunkIndex2d(lX + i, lZ + j, mapSize)] == 1){
-                    localRiverHeights[i+radius+(j+radius)*(2*radius+1)] = chunkHeightMap[ChunkIndex2d(lX + i, lZ + j, mapSize)];
-                }
-                else{
-                    localRiverHeights[i+radius+(j+radius)*(2*radius+1)] = 1000;
+        bool finishLoop;
+
+        for(int theta = 0; theta < 4; theta ++){
+            c = Math.Cos((float)theta/4*Math.PI);
+            s = Math.Sin((float)theta/4*Math.PI);
+            r1 = r2 = 1000;
+            min_Z[theta] = 1000;
+
+            finishLoop = false;
+            for(float r = 1; r <= 2*radius; r++){
+                if (!finishLoop){
+                    i = (int)(r*c);
+                    j = (int)(r*s);
+                    r1 = (int)r;
+
+                    if (lX + i >= 0 && lX + i < mapSize && lZ + j >= 0 && lZ + j < mapSize && chunkRiverMap[ChunkIndex2d(lX + i, lZ + j, mapSize)] == 0){
+                        min_Z[theta] = Math.Min(min_Z[theta], chunkHeightMap[ChunkIndex2d(lX + i, lZ + j, mapSize)]);
+                        finishLoop = true;
+                    }
                 }
             }
+
+            finishLoop = false;
+            for(float r = 1; r <= 2*radius; r++){
+                if (!finishLoop){
+                    i = -(int)(r*c);
+                    j = -(int)(r*s);
+                    r2 = (int)r;
+
+                    if (lX + i >= 0 && lX + i < mapSize && lZ + j >= 0 && lZ + j < mapSize && chunkRiverMap[ChunkIndex2d(lX + i, lZ + j, mapSize)] == 0){
+                        min_Z[theta] = Math.Min(min_Z[theta], chunkHeightMap[ChunkIndex2d(lX + i, lZ + j, mapSize)]);
+                        finishLoop = true;
+                    }
+                }
+            }
+
+            min_R[theta] = Math.Min(r1, r2);
         }
 
-        if (localRiverHeights.Min() == 1000)
-            return 0;
-        else
-            return localRiverHeights.Min();
+        int angle = Array.IndexOf(min_R, min_R.Min());
+
+        return min_Z[angle];
     }
     public void makeLakes(IServerChunk[] chunks, int chunkX, int chunkZ, int chunksize, int waterID, int gravelID, int min_height_custom, int max_height_custom, float data_width_per_pixel, SKBitmap height_map){
         /*
