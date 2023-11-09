@@ -6,7 +6,7 @@
         "Zelfior"
     ],
     "description": "Immerse yourself in an alpine world.",
-    "version": "0.1.1",
+    "version": "0.2.0",
     "dependencies": {
         "game": ""
     }

@@ -118,7 +118,7 @@ namespace AlpineStoryMod
             }
             else{
                 //  Reading the height map that will be provided to all world generation passes
-                int bitmaps_count = 15;
+                int bitmaps_count = 20;
                 heightMaps = new SKBitmap[bitmaps_count];
                 regionMaps = new SKBitmap[bitmaps_count];
 

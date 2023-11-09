@@ -110,13 +110,12 @@ public class AlpineFloor: ModStdWorldGen
         
         //  If we are in a lake : no forest
         //  The forest takes the vanilla generated value, if the altitude is not too high
-        for(int i = 0; i < chunks[0].MapChunk.MapRegion.ForestMap.Data.Length; i++){
-            chunks[0].MapChunk.MapRegion.ForestMap.Data[i] = (int) Math.Clamp(forestMap.Data[i]-1, 
-                                            getForestFromHeight(forest_height_map.Data[i])*0.5, 
+        for(int i = 0; i < forestMap.Data.Length; i++){
+            forestMap.Data[i] = (int) Math.Clamp(forestMap.Data[i] - 1, 
+                                            getForestFromHeight(forest_height_map.Data[i])*0.2, 
                                             getForestFromHeight(forest_height_map.Data[i])) ;
         }
-
-
+        
         //     Holds temperature and rain fall.
         //     16-23 bits = Red = temperature - 0 : frozen, 255 : all hail the cactus. (Height dependance strongly adds to this parameter)
         //     8-15 bits = Green = rain
@@ -174,13 +173,11 @@ public class AlpineFloor: ModStdWorldGen
             no forest above 60% of the bare_land_height_custom
             linear increase below this height
         */
+
+        // 60% à 120 d'altitude..............
+
         float relative_height = getRelativeHeight(height); 
 
-        if (relative_height > 0.6){
-            return 0;
-        }
-        else{
-            return (int)((1-relative_height/0.6)*255);
-        }
+        return Math.Clamp((int)((1-relative_height)*255.0*1.4), 0, 255);
     }
 }

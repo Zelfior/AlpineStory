@@ -97,6 +97,14 @@ public class MapElementManager
     }
     public IntDataMap2D generateRegionMap(int interMountainChunkCount, IntDataMap2D referenceMap, int chunkX, int chunkZ, int globalRegionSize, float ratio){
         MapElement[] mapElements;
+        IntDataMap2D mapCopy = new IntDataMap2D
+        {
+            Size = referenceMap.Size,
+            TopLeftPadding = referenceMap.TopLeftPadding,
+            BottomRightPadding = referenceMap.BottomRightPadding
+        };
+        mapCopy.Data = new int[mapCopy.Size*mapCopy.Size];
+
         int regionSize = referenceMap.Size;
         int innerRegionSize = referenceMap.InnerSize;
         int regionOffset = referenceMap.TopLeftPadding;
@@ -121,11 +129,10 @@ public class MapElementManager
                 h10 = mapElements[2].getPosHeight(lowX - fakeChunkX, highZ - fakeChunkZ);
                 h11 = mapElements[3].getPosHeight(highX - fakeChunkX, highZ - fakeChunkZ);
 
-                referenceMap.SetInt(i, j, min_height_custom + (int)(new float[]{h00, h10, h01, h11}).Max());
+                mapCopy.SetInt(i, j, min_height_custom + (int)(new float[]{h00, h10, h01, h11}).Max());
             }
         }
-        // Array.Reverse(referenceMap.Data);
-        return referenceMap;
+        return mapCopy;
     }
     public int[] generateRegionMap_2(MapElement[] mapElements, int interMountainChunkCount, IntDataMap2D referenceMap, int chunkX, int chunkZ){
         int regionSize = referenceMap.Size;
